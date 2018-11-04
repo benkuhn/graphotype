@@ -78,7 +78,7 @@ Interfaces and unions are discriminated at runtime where necessary using isinsta
 
 ### What types are included?
 
-In order to determine the set of types which are part of the schema, we recursively traverse all types referenced by the root Query or Mutation types provided to `create_schema` and add all thus-discovered types to the schema.
+In order to determine the set of types which are part of the schema, we recursively traverse all types referenced by the root Query or Mutation types provided to `make_schema` and add all thus-discovered types to the schema.
 
 Additionally, we recursively search for subclasses of all Interfaces thus discovered and add them to the schema as well. (Why? You might create a class hierarchy of, say, an Animal interface, Dog(Animal) and Cat(Animal); we assume that if you created Dog and Cat, you might want to return them someday wherever Animal is currently part of the interface, even if Dog/Cat are not separately referenced.)
 
@@ -90,3 +90,4 @@ Why? It's easy to see and modify your schema all in one place; it's tougher to a
 
 Of course, you are welcome to write implementation code wherever you feel like it. But if you want to separate your concerns, you just need to specify the root Query and Mutation class implementations by calling `implement_schema`. These subclasses should descend from your Query and Mutation classes in the schema definition.
 
+At runtime, all fields are resolved using `self.[fieldname]`. The value of `self` for a Query or Mutation is an instance of the root Query or Mutation class you specify. The value of `self` at each subsequent level is the object returned by the parent level's field resolver.
