@@ -3,7 +3,7 @@ import enum
 import functools
 from typing import (
     Type, get_type_hints, Generic, List, Dict, TypeVar, Any, Callable,
-    GenericMeta, Union, _Union
+    GenericMeta, Union, _Union, NewType
 )
 
 from graphql import (
@@ -46,6 +46,9 @@ class Scalar(Generic[T]):
         raise NotImplementedError()
 
 class GQLObject:
+    pass
+
+class GQLInterface:
     pass
 
 def is_union(t: Type) -> bool:
@@ -113,7 +116,8 @@ class SchemaCreator:
         return GraphQLObjectType(
             name=cls.__name__,
             description=cls.__doc__,
-            fields=lambda: self.map_fields(cls)
+            fields=lambda: self.map_fields(cls),
+            is_type_of=lambda obj, info: isinstance(obj, cls)
         )
 
     @functools.lru_cache(maxsize=None)
@@ -243,7 +247,6 @@ class SchemaCreator:
             # translate_type returns a NonNull, but we need the underlying for
             # our union
             types=[self.translate_type(t).of_type for t in args],
-            resolve_type=lambda obj, info: self.translate_type(type(obj)).of_type
         )
 
     def property_resolver(self, name: str, t: Type) -> Callable:
