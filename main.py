@@ -1,6 +1,10 @@
+from collections import OrderedDict
 import enum
 import functools
-from typing import Type, get_type_hints, Generic, List, Dict, TypeVar, Any, Callable
+from typing import (
+    Type, get_type_hints, Generic, List, Dict, TypeVar, Any, Callable,
+    GenericMeta
+)
 
 from graphql import (
     graphql,
@@ -11,8 +15,11 @@ from graphql import (
     GraphQLInt,
     GraphQLBoolean,
     GraphQLFloat,
+    GraphQLList,
     GraphQLScalarType,
     GraphQLArgument,
+    GraphQLEnumType,
+    GraphQLEnumValue,
 )
 from graphql.language import ast
 
@@ -37,6 +44,26 @@ class Scalar(Generic[T]):
 
 class GQLObject:
     pass
+
+class WorkingEnumType(GraphQLEnumType):
+    def __init__(self, cls: Type[enum.Enum]):
+        self.py_cls = cls
+        super().__init__(
+            name=cls.__name__,
+            description=cls.__doc__,
+            values=OrderedDict([
+                (v.name, GraphQLEnumValue(v.value))
+                for v in cls
+            ])
+        )
+
+    def parse_literal(self, value_ast):
+        value = super().parse_literal(value_ast)
+        return self.py_cls(value)
+
+    def parse_value(self, value):
+        value = super().parse_value(value)
+        return self.py_cls(value)
 
 def ast_to_value(node):
     if isinstance(node, (
@@ -71,12 +98,16 @@ class SchemaCreator:
         self.py2gql_types = make_scalar_map(scalars)
 
     @functools.lru_cache(maxsize=None)
-    def map_type(self, cls: Type[GQLObject]) -> Type[GraphQLObjectType]:
+    def map_type(self, cls: Type[GQLObject]) -> GraphQLObjectType:
         return GraphQLObjectType(
             name=cls.__name__,
             description=cls.__doc__,
             fields=lambda: self.map_fields(cls)
         )
+
+    @functools.lru_cache(maxsize=None)
+    def map_enum(self, cls: Type[enum.Enum]) -> GraphQLEnumType:
+        return WorkingEnumType(cls)
 
     def map_fields(self, cls: Type[GQLObject]) -> Dict[str, GraphQLField]:
         fields = {}
@@ -140,14 +171,20 @@ class SchemaCreator:
     def translate_type(self, t: Type) -> GraphQLObjectType:
         if issubclass(t, GQLObject):
             return self.map_type(t)
+        elif isinstance(t, GenericMeta):
+            origin = t.__origin__
+            if origin == List:
+                [of_type] = t.__args__
+                return GraphQLList(
+                    self.translate_type(of_type)
+                )
+        elif issubclass(t, enum.Enum):
+            return self.map_enum(t)
         elif t in BUILTIN_SCALARS:
             return BUILTIN_SCALARS[t]
         elif t in self.py2gql_types:
             return self.py2gql_types[t]
-        elif isinstance(t, enum.Enum):
-            # gql hates enums, construct our own
-            raise NotImplementedError()
-        raise NotImplementedError(f"Cannot translate {t.__name__}")
+        raise NotImplementedError(f"Cannot translate {t}")
 
     def property_resolver(self, name: str, t: Type) -> Callable:
         def resolver(self, info):
