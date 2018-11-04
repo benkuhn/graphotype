@@ -17,12 +17,12 @@
 
 Define your GraphQL schema in Python3.5+ code using classes and type annotations.
 
-This library is intended as a replacement for Graphene. However, bettergql
-(like graphene) depends on graphql-core.
+This library is intended as a replacement for [Graphene](https://graphene-python.org/). However, bettergql (like graphene) depends on [graphql-core](https://github.com/graphql-python/graphql-core).
 
-We recommend use of mypy alongside this library. With appropriate type annotations, 
-mypy will check that your implementation satisfies the schema that you define, 
-which rules out large classes of programming errors when implementing your schema.
+We recommend use of [mypy](http://mypy-lang.blogspot.com/) alongside this
+library. With appropriate type annotations, mypy will check that your
+implementation satisfies the schema that you define, which rules out large
+classes of programming errors when implementing your schema.
 
 Example:
 ```py
