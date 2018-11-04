@@ -3,7 +3,7 @@ import enum
 import functools
 from typing import (
     Type, get_type_hints, Generic, List, Dict, TypeVar, Any, Callable,
-    GenericMeta, Union, _Union, NewType
+    GenericMeta, Union, _Union, NewType, Set, Optional
 )
 
 from graphql import (
@@ -109,10 +109,60 @@ def make_scalar_map(scalars: List[Type[Scalar]]) -> Dict[Type, GraphQLScalarType
     return result
 
 class SchemaCreator:
-    def __init__(self, scalars: List[Type[Scalar]]) -> None:
+    def __init__(
+        self,
+        query: Type[GQLObject],
+        mutation: Optional[Type[GQLObject]],
+        scalars: List[Type[Scalar]],
+        types: List[Type]
+    ) -> None:
         self.py2gql_types = make_scalar_map(scalars)
+        self.type_map = {}
+        self.query = query
+        self.mutation = mutation
+        self.types = types
 
-    @functools.lru_cache(maxsize=None)
+    def build(self) -> GraphQLSchema:
+        query = self.map_type(self.query)
+        mutation = self.map_type(self.mutation) if self.mutation else None
+        return GraphQLSchema(
+            query=query,
+            mutation=mutation,
+            types=[self.map_type(t) for t in self.types]
+        )
+
+
+    def translate_type(self, t: Type) -> GraphQLNamedType:
+        if t in self.type_map:
+            return self.type_map[t]
+        gt = self._translate_type_impl(t)
+        self.type_map[t] = gt
+        return gt
+
+    def _translate_type_impl(self, t: Type) -> GraphQLNamedType:
+        if isinstance(t, GenericMeta):
+            origin = t.__origin__
+            if origin == List:
+                [of_type] = t.__args__
+                return GraphQLNonNull(GraphQLList(
+                    self.translate_type(of_type)
+                ))
+        elif is_union(t):
+            return self.map_optional(t)
+        elif is_newtype(t):
+            return GraphQLNonNull(self.map_newtype(t))
+        elif issubclass(t, GQLObject):
+            return GraphQLNonNull(self.map_type(t))
+        elif issubclass(t, GQLInterface):
+            return GraphQLNonNull(self.map_interface(t))
+        elif issubclass(t, enum.Enum):
+            return GraphQLNonNull(self.map_enum(t))
+        elif t in BUILTIN_SCALARS:
+            return GraphQLNonNull(BUILTIN_SCALARS[t])
+        elif t in self.py2gql_types:
+            return GraphQLNonNull(self.py2gql_types[t])
+        raise NotImplementedError(f"Cannot translate {t}")
+
     def map_type(self, cls: Type[GQLObject]) -> GraphQLObjectType:
         interfaces = [
             t for t in cls.__mro__
@@ -126,11 +176,9 @@ class SchemaCreator:
             is_type_of=lambda obj, info: isinstance(obj, cls)
         )
 
-    @functools.lru_cache(maxsize=None)
     def map_enum(self, cls: Type[enum.Enum]) -> GraphQLEnumType:
         return WorkingEnumType(cls)
 
-    @functools.lru_cache(maxsize=None)
     def map_interface(self, cls: Type[GQLInterface]) -> GraphQLInterfaceType:
         return GraphQLInterfaceType(
             name=cls.__name__,
@@ -197,30 +245,6 @@ class SchemaCreator:
             description=f.__doc__,
             resolver=resolver
         )
-
-    def translate_type(self, t: Type) -> GraphQLNamedType:
-        if isinstance(t, GenericMeta):
-            origin = t.__origin__
-            if origin == List:
-                [of_type] = t.__args__
-                return GraphQLNonNull(GraphQLList(
-                    self.translate_type(of_type)
-                ))
-        elif is_union(t):
-            return self.map_optional(t)
-        elif is_newtype(t):
-            return GraphQLNonNull(self.map_newtype(t))
-        elif issubclass(t, GQLObject):
-            return GraphQLNonNull(self.map_type(t))
-        elif issubclass(t, GQLInterface):
-            return GraphQLNonNull(self.map_interface(t))
-        elif issubclass(t, enum.Enum):
-            return GraphQLNonNull(self.map_enum(t))
-        elif t in BUILTIN_SCALARS:
-            return GraphQLNonNull(BUILTIN_SCALARS[t])
-        elif t in self.py2gql_types:
-            return GraphQLNonNull(self.py2gql_types[t])
-        raise NotImplementedError(f"Cannot translate {t}")
 
     def map_optional(self, t: _Union) -> GraphQLNamedType:
         NoneType = type(None)
@@ -291,9 +315,4 @@ def make_schema(
     scalars: List[Type[Scalar]] = None,
     types: List[Type] = None
 ) -> GraphQLSchema:
-    sc = SchemaCreator(scalars or [])
-    return GraphQLSchema(
-        query=sc.map_type(query),
-        mutation=sc.map_type(mutation) if mutation else None,
-        types=[sc.map_type(t) for t in types]
-    )
+    return SchemaCreator(query, mutation, scalars or [], types or []).build()
