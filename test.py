@@ -1,9 +1,17 @@
 import main
 import graphql
+import enum
+
+class MyEnum(enum.Enum):
+    GIRAFFES = 1
+    ZEBRAS = 2
 
 class Query(main.GQLObject):
     def c(self, d: bool, e: float) -> 'Foo':
         return Foo(7 if d else int(e), str(d))
+
+    def isGiraffes(self, g: MyEnum) -> bool:
+        return g == MyEnum.GIRAFFES
 
 class Foo(main.GQLObject):
     def __init__(self, a: int, b: str) -> None:
@@ -11,6 +19,7 @@ class Foo(main.GQLObject):
         self.b = b
     a: int
     b = 'foo'
+    c = MyEnum.GIRAFFES
 
 
 schema = main.make_schema(query=Query, mutation=None)
@@ -21,7 +30,9 @@ query = '''
 query {
     c(d: true, e: 1.0) {
         a
+        c
     }
+    isGiraffes(g: GIRAFFES)
 }
 '''
 

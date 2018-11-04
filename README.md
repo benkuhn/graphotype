@@ -1,12 +1,12 @@
 TODO
 
 - [x] Execution basically works
+- [x] Enums
 - [ ] Lists
 - [ ] IDs
 - [ ] Optionals
 - [ ] Unions
 - [ ] Custom scalars
-- [ ] Enums
 - [ ] Interfaces
 - [ ] Input objects
 - [ ] Query factory
