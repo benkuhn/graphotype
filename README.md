@@ -5,7 +5,8 @@ TODO
 - [x] Lists
 - [ ] IDs
 - [x] Optionals
-- [ ] Unions
+- [x] Unions
+- [ ] Custom scalars for NewTypes
 - [ ] "list-like" types
 - [ ] Custom scalars
 - [ ] Interfaces

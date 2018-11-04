@@ -1,7 +1,7 @@
 import main
 import graphql
 import enum
-from typing import List, Optional
+from typing import List, Optional, NewType, Union
 
 class MyEnum(enum.Enum):
     GIRAFFES = 1
@@ -14,6 +14,9 @@ class Query(main.GQLObject):
     def isGiraffes(self, g: MyEnum) -> bool:
         return g == MyEnum.GIRAFFES
 
+    def unionReturner(self) -> 'MyUnion':
+        return Bar()
+
 class Foo(main.GQLObject):
     def __init__(self, a: int, b: str) -> None:
         self.a = a
@@ -24,6 +27,10 @@ class Foo(main.GQLObject):
     c = MyEnum.GIRAFFES
     d: List[int]
 
+class Bar(main.GQLObject):
+    a = 1
+
+MyUnion = NewType('MyUnion', Union[Foo, Bar])
 
 schema = main.make_schema(query=Query, mutation=None)
 

@@ -21,6 +21,7 @@ from graphql import (
     GraphQLEnumType,
     GraphQLEnumValue,
     GraphQLNonNull,
+    GraphQLUnionType
 )
 from graphql.type.definition import GraphQLNamedType
 from graphql.language import ast
@@ -46,6 +47,13 @@ class Scalar(Generic[T]):
 
 class GQLObject:
     pass
+
+def is_union(t: Type) -> bool:
+    return isinstance(t, _Union)
+
+def is_newtype(t: Type) -> bool:
+    print(t)
+    return hasattr(t, '__supertype__')
 
 class WorkingEnumType(GraphQLEnumType):
     def __init__(self, cls: Type[enum.Enum]):
@@ -178,8 +186,10 @@ class SchemaCreator:
                 return GraphQLNonNull(GraphQLList(
                     self.translate_type(of_type)
                 ))
-        elif isinstance(t, _Union):
+        elif is_union(t):
             return self.map_optional(t)
+        elif is_newtype(t):
+            return GraphQLNonNull(self.map_newtype(t))
         elif issubclass(t, GQLObject):
             return GraphQLNonNull(self.map_type(t))
         elif issubclass(t, enum.Enum):
@@ -203,6 +213,23 @@ class SchemaCreator:
             if arg != NoneType
         ]
         return t_inner.of_type
+
+    def map_newtype(self, t: Any) -> GraphQLNamedType:
+        if is_union(t.__supertype__):
+            return self.map_union(t.__name__, t.__supertype__)
+        else:
+            # TODO(ben) auto generate custom scalars where necessary
+            return translate_type(t.__supertype__)
+
+    def map_union(self, name: str, t: _Union) -> GraphQLUnionType:
+        args = t.__args__
+        return GraphQLUnionType(
+            name=name,
+            # translate_type returns a NonNull, but we need the underlying for
+            # our union
+            types=[self.translate_type(t).of_type for t in args],
+            resolve_type=lambda obj: self.translate_type(type(obj))
+        )
 
     def property_resolver(self, name: str, t: Type) -> Callable:
         def resolver(self, info):
