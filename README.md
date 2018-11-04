@@ -9,7 +9,7 @@ TODO
 - [x] Custom scalars for NewTypes
 - [ ] "list-like" types
 - [ ] Other custom scalars
-- [ ] Interfaces
+- [x] Interfaces
 - [ ] Input objects
 - [ ] Query factory
 - [ ] Emit schema for not-explicitly-referenced types (eg interface impls)

@@ -7,6 +7,15 @@ class MyEnum(enum.Enum):
     GIRAFFES = 1
     ZEBRAS = 2
 
+class MyInterface(main.GQLInterface):
+    abstract: Optional[str]
+
+class ImplOne(MyInterface):
+    abstract = 'yes'
+
+class ImplTwo(MyInterface):
+    abstract = 'no'
+
 class Query(main.GQLObject):
     def c(self, d: bool, e: float) -> 'Foo':
         return Foo(7 if d else int(e), str(d))
@@ -16,6 +25,9 @@ class Query(main.GQLObject):
 
     def unionReturner(self) -> 'MyUnion':
         return Bar()
+
+    def interfaceReturner(self) -> 'MyInterface':
+        return ImplOne()
 
 class Foo(main.GQLObject):
     def __init__(self, a: int, b: str) -> None:
@@ -32,7 +44,7 @@ class Bar(main.GQLObject):
 
 MyUnion = NewType('MyUnion', Union[Foo, Bar])
 
-schema = main.make_schema(query=Query, mutation=None)
+schema = main.make_schema(query=Query, mutation=None, types=[ImplOne, ImplTwo])
 
 print(graphql.print_schema(schema))
 
@@ -48,6 +60,9 @@ query {
         ...on Bar {
             a
         }
+    }
+    interfaceReturner {
+        abstract
     }
 }
 '''
