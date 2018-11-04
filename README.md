@@ -72,7 +72,7 @@ type Query {
 - Interfaces are defined as Python classes which derive from bettergql.GQLInterface, either directly or indirectly via other interfaces.
 - Object types are defined as Python classes which derive from bettergql.GQLObject, plus zero or more interfaces.
 - Input objects are defined as Python dataclasses (must be annotated with @dataclass).
-- Unions are defined using `typing.Union[...]` 
+- Unions are defined using `typing.NewType('UnionName', typing.Union[...])`.
 
 Interfaces and unions are discriminated at runtime where necessary using isinstance checks.
 
