@@ -12,4 +12,4 @@ TODO
 - [x] Interfaces
 - [ ] Input objects
 - [ ] Query factory
-- [ ] Emit schema for not-explicitly-referenced types (eg interface impls)
+- [x] Emit schema for not-explicitly-referenced types (eg interface impls)

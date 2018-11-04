@@ -44,7 +44,7 @@ class Bar(main.GQLObject):
 
 MyUnion = NewType('MyUnion', Union[Foo, Bar])
 
-schema = main.make_schema(query=Query, mutation=None, types=[ImplOne, ImplTwo])
+schema = main.make_schema(query=Query, mutation=None)
 
 print(graphql.print_schema(schema))
 

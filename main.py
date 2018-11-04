@@ -114,21 +114,35 @@ class SchemaCreator:
         query: Type[GQLObject],
         mutation: Optional[Type[GQLObject]],
         scalars: List[Type[Scalar]],
-        types: List[Type]
     ) -> None:
         self.py2gql_types = make_scalar_map(scalars)
         self.type_map = {}
         self.query = query
         self.mutation = mutation
-        self.types = types
 
     def build(self) -> GraphQLSchema:
         query = self.map_type(self.query)
         mutation = self.map_type(self.mutation) if self.mutation else None
+        # Interface implementations may not have been explicitly referenced in
+        # the schema. But their interface must have been--so we want to
+        # traverse all interfaces, find their subclasses and explicitly supply
+        # them to the schema.
+        #
+        # To traverse all instances, we hackily construct a temporary schema,
+        # then check self.type_map to see what the schema found.
+        tmp_schema = GraphQLSchema(
+            query=query,
+            mutation=mutation,
+        )
+        extra_types = []
+        for interface in self.type_map:
+            if isinstance(interface, type) and issubclass(interface, GQLInterface):
+                for impl in interface.__subclasses__():
+                    extra_types.append(self.map_type(impl))
         return GraphQLSchema(
             query=query,
             mutation=mutation,
-            types=[self.map_type(t) for t in self.types]
+            types=extra_types
         )
 
 
@@ -138,6 +152,9 @@ class SchemaCreator:
         gt = self._translate_type_impl(t)
         self.type_map[t] = gt
         return gt
+
+    def translate_type_inner(self, t: Type) -> GraphQLNamedType:
+        return self.translate_type(t).of_type
 
     def _translate_type_impl(self, t: Type) -> GraphQLNamedType:
         if isinstance(t, GenericMeta):
@@ -172,7 +189,7 @@ class SchemaCreator:
             name=cls.__name__,
             description=cls.__doc__,
             fields=lambda: self.map_fields(cls),
-            interfaces=lambda: [self.translate_type(t).of_type for t in interfaces],
+            interfaces=lambda: [self.translate_type_inner(t) for t in interfaces],
             is_type_of=lambda obj, info: isinstance(obj, cls)
         )
 
@@ -254,11 +271,11 @@ class SchemaCreator:
 
             If you want a union you must name it via NewType.""")
         [t_inner] = [
-            self.translate_type(arg)
+            self.translate_type_inner(arg)
             for arg in args
             if arg != NoneType
         ]
-        return t_inner.of_type
+        return t_inner
 
     def map_newtype(self, t: Any) -> GraphQLNamedType:
         if is_union(t.__supertype__):
@@ -287,7 +304,7 @@ class SchemaCreator:
             name=name,
             # translate_type returns a NonNull, but we need the underlying for
             # our union
-            types=[self.translate_type(t).of_type for t in args],
+            types=[self.translate_type_inner(t) for t in args],
         )
 
     def property_resolver(self, name: str, t: Type) -> Callable:
@@ -313,6 +330,5 @@ def make_schema(
     query: Type[GQLObject],
     mutation: Type[GQLObject],
     scalars: List[Type[Scalar]] = None,
-    types: List[Type] = None
 ) -> GraphQLSchema:
-    return SchemaCreator(query, mutation, scalars or [], types or []).build()
+    return SchemaCreator(query, mutation, scalars or []).build()
