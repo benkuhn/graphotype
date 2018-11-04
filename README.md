@@ -1,6 +1,6 @@
 TODO
 
-- [ ] Execution basically works
+- [x] Execution basically works
 - [ ] Lists
 - [ ] IDs
 - [ ] Optionals
