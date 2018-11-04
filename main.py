@@ -155,14 +155,18 @@ class SchemaCreator:
         return resolver
 
     def py2gql(self, pyt: Type, i: Any) -> Any:
+        # TODO I think only enums need to be hacked around here, gql-core
+        # does the rest
+        #gqlt = self.py2gql_types[pyt]
+        #return gqlt.serialize(i)
         return i
-        gqlt = self.py2gql_types[pyt]
-        return gqlt.serialize(i)
 
     def gql2py(self, pyt: Type, i: Any) -> Any:
+        # TODO I think only enums need to be hacked around here, gql-core
+        # does the rest
+        #gqlt = self.py2gql_types[pyt]
+        #return gqlt.parse_value(i)
         return i
-        gqlt = self.py2gql_types[pyt]
-        return gqlt.parse_value(i)
 
 def make_schema(
     query: Type[GQLObject],
