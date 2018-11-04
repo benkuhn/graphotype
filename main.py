@@ -3,7 +3,7 @@ import enum
 import functools
 from typing import (
     Type, get_type_hints, Generic, List, Dict, TypeVar, Any, Callable,
-    GenericMeta
+    GenericMeta, Union, _Union
 )
 
 from graphql import (
@@ -20,7 +20,9 @@ from graphql import (
     GraphQLArgument,
     GraphQLEnumType,
     GraphQLEnumValue,
+    GraphQLNonNull,
 )
+from graphql.type.definition import GraphQLNamedType
 from graphql.language import ast
 
 BUILTIN_SCALARS = {
@@ -168,23 +170,39 @@ class SchemaCreator:
             resolver=resolver
         )
 
-    def translate_type(self, t: Type) -> GraphQLObjectType:
-        if issubclass(t, GQLObject):
-            return self.map_type(t)
-        elif isinstance(t, GenericMeta):
+    def translate_type(self, t: Type) -> GraphQLNamedType:
+        if isinstance(t, GenericMeta):
             origin = t.__origin__
             if origin == List:
                 [of_type] = t.__args__
-                return GraphQLList(
+                return GraphQLNonNull(GraphQLList(
                     self.translate_type(of_type)
-                )
+                ))
+        elif isinstance(t, _Union):
+            return self.map_optional(t)
+        elif issubclass(t, GQLObject):
+            return GraphQLNonNull(self.map_type(t))
         elif issubclass(t, enum.Enum):
-            return self.map_enum(t)
+            return GraphQLNonNull(self.map_enum(t))
         elif t in BUILTIN_SCALARS:
-            return BUILTIN_SCALARS[t]
+            return GraphQLNonNull(BUILTIN_SCALARS[t])
         elif t in self.py2gql_types:
-            return self.py2gql_types[t]
+            return GraphQLNonNull(self.py2gql_types[t])
         raise NotImplementedError(f"Cannot translate {t}")
+
+    def map_optional(self, t: _Union) -> GraphQLNamedType:
+        NoneType = type(None)
+        args = t.__args__
+        if len(args) > 2 or NoneType not in args:
+            raise ValueError("""Cannot translate type {t}.
+
+            If you want a union you must name it via NewType.""")
+        [t_inner] = [
+            self.translate_type(arg)
+            for arg in args
+            if arg != NoneType
+        ]
+        return t_inner.of_type
 
     def property_resolver(self, name: str, t: Type) -> Callable:
         def resolver(self, info):

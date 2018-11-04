@@ -1,7 +1,7 @@
 import main
 import graphql
 import enum
-from typing import List
+from typing import List, Optional
 
 class MyEnum(enum.Enum):
     GIRAFFES = 1
@@ -19,7 +19,7 @@ class Foo(main.GQLObject):
         self.a = a
         self.b = b
         self.d = [1,2,3]
-    a: int
+    a: Optional[int]
     b = 'foo'
     c = MyEnum.GIRAFFES
     d: List[int]
