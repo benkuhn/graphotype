@@ -63,7 +63,8 @@ type Query {
 
 ### Scalar Types
 - The usual Python types (int, str, bool, float) are mapped to the corresponding usual GraphQL types.
-- To get the `ID` GraphQL type, import it from this package. ID is defined as a NewType of str.
+- To get the `ID` GraphQL type, import it from this package. ID is defined as a `typing.NewType` of str.
+- In fact, any `typing.NewType` of a known scalar type can be used: we'll automatically derive serialize and deserialize functions for your NewType according to the underlying type, and define a distinct scalar type in your schema.
 - Enums must extend from the Python standard library enum.Enum. The Python names are exposed as the elements of the schema enum. The values are not exposed in the schema.
 - Custom scalar types are serialized/deserialized using supplemental classes provided at schema creation time. To support scalar type T in your Python schema, supply a class which implements the Scalar[T] protocol (i.e., expose `parse` and `serialize` as classmethods). The GraphQL schema will be created with a custom scalar type whose name is `T.__name__`.
 
