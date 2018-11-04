@@ -5,13 +5,16 @@
 - [x] Execution basically works
 - [x] Enums
 - [x] Lists
-- [ ] IDs
-- [ ] Optionals
-- [ ] Unions
-- [ ] Custom scalars
+- [x] IDs
+- [x] Optionals
+- [x] Unions
+- [x] Custom scalars for NewTypes
+- [ ] "list-like" types
+- [ ] Other custom scalars
 - [ ] Interfaces
 - [ ] Input objects
 - [ ] Query factory
+- [ ] Emit schema for not-explicitly-referenced types (eg interface impls)
 
 ## Overview
 
@@ -21,7 +24,6 @@ This library is intended as a replacement for [Graphene](https://graphene-python
 
 We recommend use of [mypy](http://mypy-lang.blogspot.com/) alongside this
 library. With appropriate type annotations, mypy will check that your
-implementation satisfies the schema that you define, which rules out large
 classes of programming errors when implementing your schema.
 
 Example:
