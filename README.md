@@ -69,6 +69,8 @@ type Query {
 - Custom scalar types are serialized/deserialized using supplemental classes provided at schema creation time. To support scalar type T in your Python schema, supply a class which implements the Scalar[T] protocol (i.e., expose `parse` and `serialize` as classmethods). The GraphQL schema will be created with a custom scalar type whose name is `T.__name__`.
 
 ### Composite Types
+- Lists are defined via `typing.List`.
+- Optional values are defined via `typing.Optional`. All values not marked optional are marked as required in the schema. We recommend using Optional types liberally, as that's how GraphQL recommends you do it.
 - Interfaces are defined as Python classes which derive from bettergql.GQLInterface, either directly or indirectly via other interfaces.
 - Object types are defined as Python classes which derive from bettergql.GQLObject, plus zero or more interfaces.
 - Input objects are defined as Python [dataclasses](https://docs.python.org/3/library/dataclasses.html) (must be annotated with @dataclass).
