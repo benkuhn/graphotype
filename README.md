@@ -10,6 +10,6 @@ TODO
 - [ ] "list-like" types
 - [ ] Other custom scalars
 - [x] Interfaces
-- [ ] Input objects
+- [x] Input objects
 - [ ] Query factory
 - [x] Emit schema for not-explicitly-referenced types (eg interface impls)

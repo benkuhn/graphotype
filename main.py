@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import dataclasses
 import enum
 import functools
 from typing import (
@@ -22,7 +23,9 @@ from graphql import (
     GraphQLEnumType,
     GraphQLEnumValue,
     GraphQLNonNull,
-    GraphQLUnionType
+    GraphQLUnionType,
+    GraphQLInputObjectType,
+    GraphQLInputObjectField,
 )
 from graphql.type.definition import GraphQLNamedType
 from graphql.language import ast
@@ -50,6 +53,10 @@ class GQLObject:
     pass
 
 class GQLInterface:
+    pass
+
+@dataclasses.dataclass
+class GQLInput:
     pass
 
 def is_union(t: Type) -> bool:
@@ -172,6 +179,8 @@ class SchemaCreator:
             return GraphQLNonNull(self.map_type(t))
         elif issubclass(t, GQLInterface):
             return GraphQLNonNull(self.map_interface(t))
+        elif issubclass(t, GQLInput):
+            return GraphQLNonNull(self.map_input(t))
         elif issubclass(t, enum.Enum):
             return GraphQLNonNull(self.map_enum(t))
         elif t in BUILTIN_SCALARS:
@@ -203,6 +212,14 @@ class SchemaCreator:
             fields=lambda: self.map_fields(cls),
         )
 
+    def map_input(self, cls: Type[GQLInput]) -> GraphQLInputObjectType:
+        return GraphQLInputObjectType(
+            name=cls.__name__,
+            description=cls.__doc__,
+            fields=lambda: self.map_input_fields(cls),
+            container_type=lambda data: cls(**data)
+        )
+
     def map_fields(self, cls: Type[Union[GQLObject, GQLInterface]]
     ) -> Dict[str, GraphQLField]:
         fields = {}
@@ -229,6 +246,14 @@ class SchemaCreator:
 
         for name, typ in hints.items():
             fields[name] = self.attribute_field(name, typ)
+        return fields
+
+    def map_input_fields(self, cls: Type[GQLInput]) -> Dict[str, GraphQLInputObjectField]:
+        fields = {}
+        for field in dataclasses.fields(cls):
+            fields[field.name] = GraphQLInputObjectField(
+                type=self.translate_type(field.type)
+            )
         return fields
 
     def property_field(self, name: str, p: property) -> GraphQLField:

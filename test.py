@@ -1,3 +1,4 @@
+import dataclasses
 import main
 import graphql
 import enum
@@ -16,6 +17,12 @@ class ImplOne(MyInterface):
 class ImplTwo(MyInterface):
     abstract = 'no'
 
+@dataclasses.dataclass
+class Input(main.GQLInput):
+    a: int
+    b: Optional[MyEnum]
+    c: int = 1
+
 class Query(main.GQLObject):
     def c(self, d: bool, e: float) -> 'Foo':
         return Foo(7 if d else int(e), str(d))
@@ -28,6 +35,10 @@ class Query(main.GQLObject):
 
     def interfaceReturner(self) -> 'MyInterface':
         return ImplOne()
+
+    def process(self, input: Input) -> bool:
+        print(input.a, input.b, input.c)
+        return True
 
 class Foo(main.GQLObject):
     def __init__(self, a: int, b: str) -> None:
@@ -64,9 +75,11 @@ query {
     interfaceReturner {
         abstract
     }
+    process(input: {a: 1, b: GIRAFFES, c: 1})
 }
 '''
 
 import json
-print('Data:', json.dumps(graphql.graphql(schema, query).data, indent=2))
-print('Errors:', graphql.graphql(schema, query).errors)
+result = graphql.graphql(schema, query)
+print('Data:', json.dumps(result.data, indent=2))
+print('Errors:', result.errors)
