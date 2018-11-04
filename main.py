@@ -122,11 +122,11 @@ class SchemaCreator:
     def function_field(self, name: str, f: Callable) -> GraphQLField:
         hints = get_type_hints(f)
         return_type: Type = hints.pop('return')
-        def resolver(self, info, **gql_args):
+        def resolver(self_, info, **gql_args):
             py_args = {}
             for name, value in gql_args.items():
                 py_args[name] = self.gql2py(hints[name], value)
-            return self.py2gql(return_type, f(self, **py_args))
+            return self.py2gql(return_type, f(self_, **py_args))
         return GraphQLField(
             self.translate_type(return_type),
             args={
@@ -147,7 +147,7 @@ class SchemaCreator:
         elif isinstance(t, enum.Enum):
             # gql hates enums, construct our own
             raise NotImplementedError()
-        raise NotImplementedError(f"{t.__name__}")
+        raise NotImplementedError(f"Cannot translate {t.__name__}")
 
     def property_resolver(self, name: str, t: Type) -> Callable:
         def resolver(self, info):
@@ -155,10 +155,12 @@ class SchemaCreator:
         return resolver
 
     def py2gql(self, pyt: Type, i: Any) -> Any:
+        return i
         gqlt = self.py2gql_types[pyt]
         return gqlt.serialize(i)
 
     def gql2py(self, pyt: Type, i: Any) -> Any:
+        return i
         gqlt = self.py2gql_types[pyt]
         return gqlt.parse_value(i)
 
