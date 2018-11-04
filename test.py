@@ -7,6 +7,8 @@ class MyEnum(enum.Enum):
     GIRAFFES = 1
     ZEBRAS = 2
 
+MyInt = NewType('MyInt', int)
+
 class Query(main.GQLObject):
     def c(self, d: bool, e: float) -> 'Foo':
         return Foo(7 if d else int(e), str(d))
@@ -28,7 +30,7 @@ class Foo(main.GQLObject):
     d: List[int]
 
 class Bar(main.GQLObject):
-    a = 1
+    a: MyInt = 1
 
 MyUnion = NewType('MyUnion', Union[Foo, Bar])
 
@@ -44,6 +46,11 @@ query {
         d
     }
     isGiraffes(g: GIRAFFES)
+    unionReturner {
+        ...on Bar {
+            a
+        }
+    }
 }
 '''
 

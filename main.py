@@ -52,8 +52,9 @@ def is_union(t: Type) -> bool:
     return isinstance(t, _Union)
 
 def is_newtype(t: Type) -> bool:
-    print(t)
     return hasattr(t, '__supertype__')
+
+ID = NewType('ID', str)
 
 class WorkingEnumType(GraphQLEnumType):
     def __init__(self, cls: Type[enum.Enum]):
@@ -217,9 +218,23 @@ class SchemaCreator:
     def map_newtype(self, t: Any) -> GraphQLNamedType:
         if is_union(t.__supertype__):
             return self.map_union(t.__name__, t.__supertype__)
+        elif t.__supertype__ in BUILTIN_SCALARS:
+            return self.map_custom_scalar(
+                t.__name__,
+                BUILTIN_SCALARS[t.__supertype__]
+            )
         else:
-            # TODO(ben) auto generate custom scalars where necessary
+            # just de-alias the newtype I guess
             return translate_type(t.__supertype__)
+
+    def map_custom_scalar(self, name: str, supertype: GraphQLScalarType
+    ) -> GraphQLScalarType:
+        return GraphQLScalarType(
+            name=name,
+            serialize=supertype.serialize,
+            parse_literal=supertype.parse_literal,
+            parse_value=supertype.parse_value,
+        )
 
     def map_union(self, name: str, t: _Union) -> GraphQLUnionType:
         args = t.__args__
@@ -228,7 +243,7 @@ class SchemaCreator:
             # translate_type returns a NonNull, but we need the underlying for
             # our union
             types=[self.translate_type(t).of_type for t in args],
-            resolve_type=lambda obj: self.translate_type(type(obj))
+            resolve_type=lambda obj, info: self.translate_type(type(obj)).of_type
         )
 
     def property_resolver(self, name: str, t: Type) -> Callable:

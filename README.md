@@ -3,12 +3,12 @@ TODO
 - [x] Execution basically works
 - [x] Enums
 - [x] Lists
-- [ ] IDs
+- [x] IDs
 - [x] Optionals
 - [x] Unions
-- [ ] Custom scalars for NewTypes
+- [x] Custom scalars for NewTypes
 - [ ] "list-like" types
-- [ ] Custom scalars
+- [ ] Other custom scalars
 - [ ] Interfaces
 - [ ] Input objects
 - [ ] Query factory
