@@ -1,6 +1,7 @@
 import main
 import graphql
 import enum
+from typing import List
 
 class MyEnum(enum.Enum):
     GIRAFFES = 1
@@ -17,9 +18,11 @@ class Foo(main.GQLObject):
     def __init__(self, a: int, b: str) -> None:
         self.a = a
         self.b = b
+        self.d = [1,2,3]
     a: int
     b = 'foo'
     c = MyEnum.GIRAFFES
+    d: List[int]
 
 
 schema = main.make_schema(query=Query, mutation=None)
@@ -31,6 +34,7 @@ query {
     c(d: true, e: 1.0) {
         a
         c
+        d
     }
     isGiraffes(g: GIRAFFES)
 }

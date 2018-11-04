@@ -2,7 +2,7 @@ TODO
 
 - [x] Execution basically works
 - [x] Enums
-- [ ] Lists
+- [x] Lists
 - [ ] IDs
 - [ ] Optionals
 - [ ] Unions
