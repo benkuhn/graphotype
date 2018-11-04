@@ -24,6 +24,7 @@ This library is intended as a replacement for [Graphene](https://graphene-python
 
 We recommend use of [mypy](http://mypy-lang.blogspot.com/) alongside this
 library. With appropriate type annotations, mypy will check that your
+implementation satisfies the schema that you define, which rules out large
 classes of programming errors when implementing your schema.
 
 Example:
