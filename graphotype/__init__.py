@@ -123,7 +123,6 @@ class SchemaCreator:
         mutation: Optional[Type[GQLObject]],
         scalars: List[Type[Scalar]],
     ) -> None:
-        print(scalars)
         self.py2gql_types = make_scalar_map(scalars)
         self.type_map: Dict[Type, GraphQLNamedType] = {}
         self.query = query
@@ -144,10 +143,10 @@ class SchemaCreator:
             mutation=mutation,
         )
         extra_types = []
-        for interface in self.type_map:
+        for interface in list(self.type_map):
             if isinstance(interface, type) and issubclass(interface, GQLInterface):
                 for impl in interface.__subclasses__():
-                    extra_types.append(self.translate_type(impl))
+                    extra_types.append(self.translate_type_inner(impl))
         return GraphQLSchema(
             query=query,
             mutation=mutation,

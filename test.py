@@ -1,6 +1,6 @@
 import dataclasses
 from datetime import datetime
-import main
+import graphotype
 import graphql
 import enum
 from typing import Iterable, Optional, NewType, Union
@@ -10,22 +10,22 @@ class MyEnum(enum.Enum):
     GIRAFFES = 1
     ZEBRAS = 2
 
-class MyInterface(main.GQLInterface):
+class MyInterface(graphotype.GQLInterface):
     abstract: Optional[str]
 
-class ImplOne(MyInterface):
+class ImplOne(graphotype.GQLObject, MyInterface):
     abstract = 'yes'
 
-class ImplTwo(MyInterface):
+class ImplTwo(graphotype.GQLObject, MyInterface):
     abstract = 'no'
 
 @dataclasses.dataclass
-class Input(main.GQLInput):
+class Input(graphotype.GQLInput):
     a: int
     b: Optional[MyEnum]
     c: int = 1
 
-class Query(main.GQLObject):
+class Query(graphotype.GQLObject):
     def c(self, d: bool, e: float) -> 'Foo':
         return Foo(7 if d else int(e), str(d))
 
@@ -46,7 +46,7 @@ class Query(main.GQLObject):
         assert isinstance(a_date, datetime)
         return datetime.now()
 
-class Foo(main.GQLObject):
+class Foo(graphotype.GQLObject):
     def __init__(self, a: int, b: str) -> None:
         self.a = a
         self.b = b
@@ -58,10 +58,10 @@ class Foo(main.GQLObject):
         yield 2
         yield 3
 
-class Bar(main.GQLObject):
-    a: main.ID = 'a'
+class Bar(graphotype.GQLObject):
+    a: graphotype.ID = 'a'
 
-class Date(main.Scalar):
+class Date(graphotype.Scalar):
     t = datetime
     _format = '%Y-%m-%d %H:%M:%S'
     @classmethod
@@ -74,7 +74,7 @@ class Date(main.Scalar):
 
 MyUnion = NewType('MyUnion', Union[Foo, Bar])
 
-schema = main.make_schema(query=Query, mutation=None, scalars=[Date])
+schema = graphotype.make_schema(query=Query, mutation=None, scalars=[Date])
 
 print(graphql.print_schema(schema))
 
