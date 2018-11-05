@@ -1,13 +1,29 @@
+import dataclasses
+from datetime import datetime
 import main
 import graphql
 import enum
-from typing import List, Optional, NewType, Union
+from typing import Iterable, Optional, NewType, Union
+import traceback
 
 class MyEnum(enum.Enum):
     GIRAFFES = 1
     ZEBRAS = 2
 
-MyInt = NewType('MyInt', int)
+class MyInterface(main.GQLInterface):
+    abstract: Optional[str]
+
+class ImplOne(MyInterface):
+    abstract = 'yes'
+
+class ImplTwo(MyInterface):
+    abstract = 'no'
+
+@dataclasses.dataclass
+class Input(main.GQLInput):
+    a: int
+    b: Optional[MyEnum]
+    c: int = 1
 
 class Query(main.GQLObject):
     def c(self, d: bool, e: float) -> 'Foo':
@@ -19,22 +35,46 @@ class Query(main.GQLObject):
     def unionReturner(self) -> 'MyUnion':
         return Bar()
 
+    def interfaceReturner(self) -> 'MyInterface':
+        return ImplOne()
+
+    def process(self, input: Input) -> bool:
+        print(input.a, input.b, input.c)
+        return True
+
+    def now(self, a_date: datetime) -> datetime:
+        assert isinstance(a_date, datetime)
+        return datetime.now()
+
 class Foo(main.GQLObject):
     def __init__(self, a: int, b: str) -> None:
         self.a = a
         self.b = b
-        self.d = [1,2,3]
     a: Optional[int]
     b = 'foo'
     c = MyEnum.GIRAFFES
-    d: List[int]
+    def d(self) -> Iterable[int]:
+        yield 1
+        yield 2
+        yield 3
 
 class Bar(main.GQLObject):
-    a: MyInt = 1
+    a: main.ID = 'a'
+
+class Date(main.Scalar):
+    t = datetime
+    _format = '%Y-%m-%d %H:%M:%S'
+    @classmethod
+    def serialize(cls, instance: datetime) -> str:
+        return instance.strftime(cls._format)
+    @classmethod
+    def parse(cls, value: str) -> datetime:
+        return datetime.strptime(value, cls._format)
+
 
 MyUnion = NewType('MyUnion', Union[Foo, Bar])
 
-schema = main.make_schema(query=Query, mutation=None)
+schema = main.make_schema(query=Query, mutation=None, scalars=[Date])
 
 print(graphql.print_schema(schema))
 
@@ -51,9 +91,19 @@ query {
             a
         }
     }
+    interfaceReturner {
+        abstract
+    }
+    process(input: {a: 1, b: GIRAFFES, c: 1})
+    now(a_date: "2018-01-01 02:33:44")
 }
 '''
 
 import json
-print('Data:', json.dumps(graphql.graphql(schema, query).data, indent=2))
-print('Errors:', graphql.graphql(schema, query).errors)
+result = graphql.graphql(schema, query)
+print('Data:', json.dumps(result.data, indent=2))
+print('Errors:', result.errors)
+
+if result.errors:
+    for e in result.errors:
+        traceback.print_exception(type(e), e, e.__traceback__)

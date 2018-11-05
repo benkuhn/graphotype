@@ -9,12 +9,12 @@
 - [x] Optionals
 - [x] Unions
 - [x] Custom scalars for NewTypes
-- [ ] "list-like" types
+- [x] "list-like" types
 - [ ] Other custom scalars
-- [ ] Interfaces
-- [ ] Input objects
+- [x] Interfaces
+- [x] Input objects
 - [ ] Query factory
-- [ ] Emit schema for not-explicitly-referenced types (eg interface impls)
+- [x] Emit schema for not-explicitly-referenced types (eg interface impls)
 
 ## Overview
 
