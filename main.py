@@ -4,7 +4,7 @@ import enum
 import functools
 from typing import (
     Type, get_type_hints, Generic, List, Dict, TypeVar, Any, Callable,
-    GenericMeta, Union, _Union, NewType, Set, Optional
+    GenericMeta, Union, _Union, NewType, Set, Optional, Iterable
 )
 
 from graphql import (
@@ -165,8 +165,12 @@ class SchemaCreator:
 
     def _translate_type_impl(self, t: Type) -> GraphQLNamedType:
         if isinstance(t, GenericMeta):
-            origin = t.__origin__
-            if origin == List:
+            if Iterable in t.__mro__:
+                # TODO: figure out which generic arg represents the sequence
+                # type, in the case of multi-arg generics
+                if len(t.__args__) > 1:
+                    raise NotImplementedError(
+                        "Can't translate {t} because it has multiple type args")
                 [of_type] = t.__args__
                 return GraphQLNonNull(GraphQLList(
                     self.translate_type(of_type)

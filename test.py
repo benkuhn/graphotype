@@ -2,7 +2,7 @@ import dataclasses
 import main
 import graphql
 import enum
-from typing import List, Optional, NewType, Union
+from typing import Iterable, Optional, NewType, Union
 
 class MyEnum(enum.Enum):
     GIRAFFES = 1
@@ -44,11 +44,13 @@ class Foo(main.GQLObject):
     def __init__(self, a: int, b: str) -> None:
         self.a = a
         self.b = b
-        self.d = [1,2,3]
     a: Optional[int]
     b = 'foo'
     c = MyEnum.GIRAFFES
-    d: List[int]
+    def d(self) -> Iterable[int]:
+        yield 1
+        yield 2
+        yield 3
 
 class Bar(main.GQLObject):
     a: main.ID = 'a'

@@ -7,7 +7,7 @@ TODO
 - [x] Optionals
 - [x] Unions
 - [x] Custom scalars for NewTypes
-- [ ] "list-like" types
+- [x] "list-like" types
 - [ ] Other custom scalars
 - [x] Interfaces
 - [x] Input objects
