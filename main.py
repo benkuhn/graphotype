@@ -42,11 +42,11 @@ class Scalar(Generic[T]):
     t: Type[T]
 
     @classmethod
-    def parse(cls, s: Any) -> T:
+    def parse(cls, value: Any) -> T:
         raise NotImplementedError()
 
     @classmethod
-    def serialize(cls, o: T) -> Any:
+    def serialize(cls, instance: T) -> Any:
         raise NotImplementedError()
 
 class GQLObject:
@@ -110,7 +110,7 @@ def make_scalar_map(scalars: List[Type[Scalar]]) -> Dict[Type, GraphQLScalarType
             name=scalar.__name__,
             description=scalar.__doc__,
             serialize=scalar.serialize,
-            parse_value=scalar.parse,
+            parse_value=lambda val: scalar.parse(val),
             parse_literal=lambda node: scalar.parse(ast_to_value(node))
         )
     return result
@@ -122,6 +122,7 @@ class SchemaCreator:
         mutation: Optional[Type[GQLObject]],
         scalars: List[Type[Scalar]],
     ) -> None:
+        print(scalars)
         self.py2gql_types = make_scalar_map(scalars)
         self.type_map = {}
         self.query = query
