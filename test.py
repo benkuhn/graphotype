@@ -10,22 +10,22 @@ class MyEnum(enum.Enum):
     GIRAFFES = 1
     ZEBRAS = 2
 
-class MyInterface(graphotype.GQLInterface):
+class MyInterface(graphotype.Interface):
     abstract: Optional[str]
 
-class ImplOne(graphotype.GQLObject, MyInterface):
+class ImplOne(graphotype.Object, MyInterface):
     abstract = 'yes'
 
-class ImplTwo(graphotype.GQLObject, MyInterface):
+class ImplTwo(graphotype.Object, MyInterface):
     abstract = 'no'
 
 @dataclasses.dataclass
-class Input(graphotype.GQLInput):
+class Input:
     a: int
     b: Optional[MyEnum]
     c: int = 1
 
-class Query(graphotype.GQLObject):
+class Query(graphotype.Object):
     def c(self, d: bool, e: float) -> 'Foo':
         return Foo(7 if d else int(e), str(d))
 
@@ -46,7 +46,7 @@ class Query(graphotype.GQLObject):
         assert isinstance(a_date, datetime)
         return datetime.now()
 
-class Foo(graphotype.GQLObject):
+class Foo(graphotype.Object):
     def __init__(self, a: int, b: str) -> None:
         self.a = a
         self.b = b
@@ -58,7 +58,7 @@ class Foo(graphotype.GQLObject):
         yield 2
         yield 3
 
-class Bar(graphotype.GQLObject):
+class Bar(graphotype.Object):
     a: graphotype.ID = 'a'
 
 class Date(graphotype.Scalar):

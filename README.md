@@ -1,26 +1,12 @@
-# BetterGQL: Typed GQL server library
+# graphotype
 
-## TODO
-
-- [x] Execution basically works
-- [x] Enums
-- [x] Lists
-- [x] IDs
-- [x] Optionals
-- [x] Unions
-- [x] Custom scalars for NewTypes
-- [x] "list-like" types
-- [ ] Other custom scalars
-- [x] Interfaces
-- [x] Input objects
-- [ ] Query factory
-- [x] Emit schema for not-explicitly-referenced types (eg interface impls)
+*A concise, type-safe way to write GraphQL backends in Python.*
 
 ## Overview
 
 Define your GraphQL schema in Python3.5+ code using classes and type annotations.
 
-This library is intended as a replacement for [Graphene](https://graphene-python.org/). However, bettergql (like graphene) depends on [graphql-core](https://github.com/graphql-python/graphql-core).
+Graphotype is intended as a replacement for [Graphene](https://graphene-python.org/). However, graphotype (like graphene) depends on [graphql-core](https://github.com/graphql-python/graphql-core).
 
 We recommend use of [mypy](http://mypy-lang.blogspot.com/) alongside this
 library. With appropriate type annotations, mypy will check that your
@@ -72,27 +58,18 @@ type Query {
 - Custom scalar types are serialized/deserialized using supplemental classes provided at schema creation time. To support scalar type T in your Python schema, supply a class which implements the Scalar[T] protocol (i.e., expose `parse` and `serialize` as classmethods). The GraphQL schema will be created with a custom scalar type whose name is `T.__name__`.
 
 ### Composite Types
+
 - Lists are defined via `typing.List`.
 - Optional values are defined via `typing.Optional`. All values not marked optional are marked as required in the schema. We recommend using Optional types liberally, as that's how GraphQL recommends you do it.
-- Interfaces are defined as Python classes which derive from bettergql.GQLInterface, either directly or indirectly via other interfaces.
-- Object types are defined as Python classes which derive from bettergql.GQLObject, plus zero or more interfaces.
+- Interfaces are defined as Python classes which derive from `graphotype.Interface`, either directly or indirectly via other interfaces.
+- Object types are defined as Python classes which derive from `graphotype.Object`, plus zero or more interfaces.
 - Input objects are defined as Python [dataclasses](https://docs.python.org/3/library/dataclasses.html) (must be annotated with @dataclass).
 - Unions are defined using `typing.NewType('UnionName', typing.Union[...])`. (We need the NewType to give it a name for use in the schema.)
 
-Interfaces and unions are discriminated at runtime where necessary using isinstance checks.
+Under the hood, interfaces and unions are discriminated at runtime where necessary using `isinstance` checks.
 
 ### What types are included?
 
 In order to determine the set of types which are part of the schema, we recursively traverse all types referenced by the root Query or Mutation types provided to `make_schema` and add all thus-discovered types to the schema.
 
-Additionally, we recursively search for subclasses of all Interfaces thus discovered and add them to the schema as well. (Why? You might create a class hierarchy of, say, an Animal interface, Dog(Animal) and Cat(Animal); we assume that if you created Dog and Cat, you might want to return them someday wherever Animal is currently part of the interface, even if Dog/Cat are not separately referenced.)
-
-### Separation of Concerns
-
-Better-GQL allows you to define your schema separately from the implementation of resolvers and mutators. This is the recommended way to write your code.
-
-Why? It's easy to see and modify your schema all in one place; it's tougher to accidentally make breaking API changes; you don't have to import your whole implementation in order to introspect the schema; and you can include implementation-detail fields in your implementation code that aren't part of the schema.
-
-Of course, you are welcome to write implementation code wherever you feel like it. But if you want to separate your concerns, you just need to specify the root Query and Mutation class implementations by calling `implement_schema`. These subclasses should descend from your Query and Mutation classes in the schema definition.
-
-At runtime, all fields are resolved using `self.[fieldname]`. The value of `self` for a Query or Mutation is an instance of the root Query or Mutation class you specify. The value of `self` at each subsequent level is the object returned by the parent level's field resolver.
+Additionally, we recursively search for subclasses of all `Interface`s thus discovered and add them to the schema as well. (Why? You might create a class hierarchy of, say, an Animal interface, Dog(Animal) and Cat(Animal); we assume that if you created Dog and Cat, you might want to return them someday wherever Animal is currently part of the interface, even if Dog/Cat are not separately referenced.)

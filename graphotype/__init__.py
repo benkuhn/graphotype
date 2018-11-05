@@ -50,14 +50,10 @@ class Scalar(Generic[T]):
     def serialize(cls, instance: T) -> Any:
         raise NotImplementedError()
 
-class GQLObject:
+class Object:
     pass
 
-class GQLInterface:
-    pass
-
-@dataclasses.dataclass
-class GQLInput:
+class Interface:
     pass
 
 def is_union(t: Type) -> bool:
@@ -119,8 +115,8 @@ def make_scalar_map(scalars: List[Type[Scalar]]) -> Dict[Type, GraphQLScalarType
 class SchemaCreator:
     def __init__(
         self,
-        query: Type[GQLObject],
-        mutation: Optional[Type[GQLObject]],
+        query: Type[Object],
+        mutation: Optional[Type[Object]],
         scalars: List[Type[Scalar]],
     ) -> None:
         self.py2gql_types = make_scalar_map(scalars)
@@ -144,7 +140,7 @@ class SchemaCreator:
         )
         extra_types = []
         for interface in list(self.type_map):
-            if isinstance(interface, type) and issubclass(interface, GQLInterface):
+            if isinstance(interface, type) and issubclass(interface, Interface):
                 for impl in interface.__subclasses__():
                     extra_types.append(self.translate_type_inner(impl))
         return GraphQLSchema(
@@ -180,11 +176,11 @@ class SchemaCreator:
             return self.map_optional(t)
         elif is_newtype(t):
             return GraphQLNonNull(self.map_newtype(t))
-        elif issubclass(t, GQLObject):
+        elif issubclass(t, Object):
             return GraphQLNonNull(self.map_type(t))
-        elif issubclass(t, GQLInterface):
+        elif issubclass(t, Interface):
             return GraphQLNonNull(self.map_interface(t))
-        elif issubclass(t, GQLInput):
+        elif dataclasses.is_dataclass(t):
             return GraphQLNonNull(self.map_input(t))
         elif issubclass(t, enum.Enum):
             return GraphQLNonNull(self.map_enum(t))
@@ -194,10 +190,10 @@ class SchemaCreator:
             return GraphQLNonNull(self.py2gql_types[t])
         raise NotImplementedError(f"Cannot translate {t}")
 
-    def map_type(self, cls: Type[GQLObject]) -> GraphQLObjectType:
+    def map_type(self, cls: Type[Object]) -> GraphQLObjectType:
         interfaces = [
             t for t in cls.__mro__
-            if issubclass(t, GQLInterface) and t != cls and t != GQLInterface
+            if issubclass(t, Interface) and t != cls and t != Interface
         ]
         return GraphQLObjectType(
             name=cls.__name__,
@@ -210,14 +206,14 @@ class SchemaCreator:
     def map_enum(self, cls: Type[enum.Enum]) -> GraphQLEnumType:
         return WorkingEnumType(cls)
 
-    def map_interface(self, cls: Type[GQLInterface]) -> GraphQLInterfaceType:
+    def map_interface(self, cls: Type[Interface]) -> GraphQLInterfaceType:
         return GraphQLInterfaceType(
             name=cls.__name__,
             description=cls.__doc__,
             fields=lambda: self.map_fields(cls),
         )
 
-    def map_input(self, cls: Type[GQLInput]) -> GraphQLInputObjectType:
+    def map_input(self, cls: Type) -> GraphQLInputObjectType:
         return GraphQLInputObjectType(
             name=cls.__name__,
             description=cls.__doc__,
@@ -225,7 +221,7 @@ class SchemaCreator:
             container_type=lambda data: cls(**data) # type: ignore
         )
 
-    def map_fields(self, cls: Type[Union[GQLObject, GQLInterface]]
+    def map_fields(self, cls: Type[Union[Object, Interface]]
     ) -> Dict[str, GraphQLField]:
         fields = {}
         hints = get_type_hints(cls)
@@ -253,7 +249,7 @@ class SchemaCreator:
             fields[name] = self.attribute_field(name, typ)
         return fields
 
-    def map_input_fields(self, cls: Type[GQLInput]) -> Dict[str, GraphQLInputObjectField]:
+    def map_input_fields(self, cls: Type) -> Dict[str, GraphQLInputObjectField]:
         fields = {}
         for field in dataclasses.fields(cls):
             fields[field.name] = GraphQLInputObjectField(
@@ -357,8 +353,8 @@ class SchemaCreator:
         return i
 
 def make_schema(
-    query: Type[GQLObject],
-    mutation: Type[GQLObject],
+    query: Type[Object],
+    mutation: Type[Object],
     scalars: List[Type[Scalar]] = None,
 ) -> GraphQLSchema:
     return SchemaCreator(query, mutation, scalars or []).build()
