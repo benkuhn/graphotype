@@ -290,16 +290,15 @@ class SchemaCreator:
         )
 
     def map_optional(self, t: _Union) -> GraphQLNamedType:
-        NoneType = type(None)
         args = t.__args__
-        if len(args) > 2 or NoneType not in args:
+        if len(args) > 2 or type(None) not in args:
             raise ValueError("""Cannot translate type {t}.
 
             If you want a union you must name it via NewType.""")
         [t_inner] = [
             self.translate_type_inner(arg)
             for arg in args
-            if arg != NoneType
+            if arg != type(None)
         ]
         return t_inner
 
