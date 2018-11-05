@@ -4,8 +4,9 @@ import enum
 import functools
 from typing import (
     Type, get_type_hints, Generic, List, Dict, TypeVar, Any, Callable,
-    GenericMeta, Union, _Union, NewType, Set, Optional, Iterable
+    GenericMeta, Union, NewType, Set, Optional, Iterable
 )
+from typing import _Union  # type: ignore
 
 from graphql import (
     graphql,
@@ -30,7 +31,7 @@ from graphql import (
 from graphql.type.definition import GraphQLNamedType
 from graphql.language import ast
 
-BUILTIN_SCALARS = {
+BUILTIN_SCALARS: Dict[Type, GraphQLScalarType] = {
     int: GraphQLInt,
     float: GraphQLFloat,
     str: GraphQLString,
@@ -68,7 +69,7 @@ def is_newtype(t: Type) -> bool:
 ID = NewType('ID', str)
 
 class WorkingEnumType(GraphQLEnumType):
-    def __init__(self, cls: Type[enum.Enum]):
+    def __init__(self, cls: Type[enum.Enum]) -> None:
         self.py_cls = cls
         super().__init__(
             name=cls.__name__,
@@ -124,7 +125,7 @@ class SchemaCreator:
     ) -> None:
         print(scalars)
         self.py2gql_types = make_scalar_map(scalars)
-        self.type_map = {}
+        self.type_map: Dict[Type, GraphQLNamedType] = {}
         self.query = query
         self.mutation = mutation
 
@@ -146,7 +147,7 @@ class SchemaCreator:
         for interface in self.type_map:
             if isinstance(interface, type) and issubclass(interface, GQLInterface):
                 for impl in interface.__subclasses__():
-                    extra_types.append(self.map_type(impl))
+                    extra_types.append(self.translate_type(impl))
         return GraphQLSchema(
             query=query,
             mutation=mutation,
@@ -222,7 +223,7 @@ class SchemaCreator:
             name=cls.__name__,
             description=cls.__doc__,
             fields=lambda: self.map_input_fields(cls),
-            container_type=lambda data: cls(**data)
+            container_type=lambda data: cls(**data) # type: ignore
         )
 
     def map_fields(self, cls: Type[Union[GQLObject, GQLInterface]]
@@ -317,7 +318,7 @@ class SchemaCreator:
             )
         else:
             # just de-alias the newtype I guess
-            return translate_type(t.__supertype__)
+            return self.translate_type(t.__supertype__)
 
     def map_custom_scalar(self, name: str, supertype: GraphQLScalarType
     ) -> GraphQLScalarType:
