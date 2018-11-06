@@ -352,7 +352,7 @@ class SchemaCreator:
 
 def make_schema(
     query: Type[Object],
-    mutation: Type[Object],
+    mutation: Optional[Type[Object]] = None,
     scalars: List[Type[Scalar]] = None,
     unions: Dict[str, Type] = None
 ) -> GraphQLSchema:
