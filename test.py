@@ -72,9 +72,9 @@ class Date(graphotype.Scalar):
         return datetime.strptime(value, cls._format)
 
 
-MyUnion = NewType('MyUnion', Union[Foo, Bar])
+MyUnion = Union[Foo, Bar]
 
-schema = graphotype.make_schema(query=Query, mutation=None, scalars=[Date])
+schema = graphotype.make_schema(query=Query, mutation=None, scalars=[Date], unions=dict(MyUnion=MyUnion))
 
 print(graphql.print_schema(schema))
 

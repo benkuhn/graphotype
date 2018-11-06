@@ -4,7 +4,7 @@ import enum
 import functools
 from typing import (
     Type, get_type_hints, Generic, List, Dict, TypeVar, Any, Callable,
-    GenericMeta, Union, NewType, Set, Optional, Iterable
+    GenericMeta, Union, NewType, Set, Optional, Iterable, FrozenSet
 )
 from typing import _Union  # type: ignore
 
@@ -55,6 +55,19 @@ class Object:
 
 class Interface:
     pass
+
+def unwrap_optional(t: Type) -> Optional[Type]:
+    """If t is Optional[foo] for some foo, return foo, otherwise None"""
+    assert is_union(t)
+    args = t.__args__
+    if type(None) not in args:
+        return None
+    inner_args = set(args) - {type(None)}
+    if len(inner_args) == 1:
+        return next(iter(inner_args))
+    else:
+        return Union[inner_args]
+
 
 def is_union(t: Type) -> bool:
     return isinstance(t, _Union)
@@ -118,11 +131,13 @@ class SchemaCreator:
         query: Type[Object],
         mutation: Optional[Type[Object]],
         scalars: List[Type[Scalar]],
+        unions: Dict[FrozenSet[Type], str]
     ) -> None:
         self.py2gql_types = make_scalar_map(scalars)
         self.type_map: Dict[Type, GraphQLNamedType] = {}
         self.query = query
         self.mutation = mutation
+        self.unions = unions
 
     def build(self) -> GraphQLSchema:
         query = self.map_type(self.query)
@@ -173,7 +188,12 @@ class SchemaCreator:
                     self.translate_type(of_type)
                 ))
         elif is_union(t):
-            return self.map_optional(t)
+            inner = unwrap_optional(t)
+            if inner is None:
+                # non-Optional union
+                return self.map_union(t)
+            else:
+                return self.translate_type_inner(inner)
         elif is_newtype(t):
             return GraphQLNonNull(self.map_newtype(t))
         elif issubclass(t, Object):
@@ -289,23 +309,8 @@ class SchemaCreator:
             resolver=resolver
         )
 
-    def map_optional(self, t: _Union) -> GraphQLNamedType:
-        args = t.__args__
-        if len(args) > 2 or type(None) not in args:
-            raise ValueError("""Cannot translate type {t}.
-
-            If you want a union you must name it via NewType.""")
-        [t_inner] = [
-            self.translate_type_inner(arg)
-            for arg in args
-            if arg != type(None)
-        ]
-        return t_inner
-
     def map_newtype(self, t: Any) -> GraphQLNamedType:
-        if is_union(t.__supertype__):
-            return self.map_union(t.__name__, t.__supertype__)
-        elif t.__supertype__ in BUILTIN_SCALARS:
+        if t.__supertype__ in BUILTIN_SCALARS:
             return self.map_custom_scalar(
                 t.__name__,
                 BUILTIN_SCALARS[t.__supertype__]
@@ -323,8 +328,14 @@ class SchemaCreator:
             parse_value=supertype.parse_value,
         )
 
-    def map_union(self, name: str, t: _Union) -> GraphQLUnionType:
+    def map_union(self, t: _Union) -> GraphQLUnionType:
         args = t.__args__
+        name = self.unions.get(frozenset(args))
+        if name is None:
+            raise ValueError(f"""Could not find a name for {t}.
+
+            In GraphQL, any union needs a name--please use the `unions`
+            argument to `make_schema` to supply one.""")
         return GraphQLUnionType(
             name=name,
             # translate_type returns a NonNull, but we need the underlying for
@@ -355,5 +366,9 @@ def make_schema(
     query: Type[Object],
     mutation: Type[Object],
     scalars: List[Type[Scalar]] = None,
+    unions: Dict[str, Type] = None
 ) -> GraphQLSchema:
-    return SchemaCreator(query, mutation, scalars or []).build()
+    if unions is None:
+        unions = {}
+    unions_inverted = {frozenset(t.__args__): name for name, t in unions.items()}
+    return SchemaCreator(query, mutation, scalars or [], unions_inverted).build()
