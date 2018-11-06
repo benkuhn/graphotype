@@ -27,6 +27,7 @@ from graphql import (
     GraphQLUnionType,
     GraphQLInputObjectType,
     GraphQLInputObjectField,
+    ResolveInfo
 )
 from graphql.type.definition import GraphQLNamedType
 from graphql.language import ast
@@ -89,15 +90,15 @@ class WorkingEnumType(GraphQLEnumType):
             ])
         )
 
-    def parse_literal(self, value_ast):
+    def parse_literal(self, value_ast: Any) -> enum.Enum:
         value = super().parse_literal(value_ast)
         return self.py_cls(value)
 
-    def parse_value(self, value):
+    def parse_value(self, value: str) -> enum.Enum:
         value = super().parse_value(value)
         return self.py_cls(value)
 
-def ast_to_value(node):
+def ast_to_value(node: Any) -> Union[int, float, str, bool, List, Dict]:
     if isinstance(node, (
         ast.IntValue,
         ast.FloatValue,
@@ -109,7 +110,7 @@ def ast_to_value(node):
         return [ast_to_value(v) for v in node.values]
     elif isinstance(node, ast.ObjectValue):
         return {field.name: ast_to_value(field.value) for field in node.fields}
-    # TODO handle enum values
+    # TODO handle enum values?
     else:
         raise NotImplementedError()
 
@@ -282,23 +283,23 @@ class SchemaCreator:
         return GraphQLField(
             self.translate_type(return_type),
             description=p.__doc__,
-            resolver=self.property_resolver(name, return_type)
+            resolver=self.property_resolver(name)
         )
 
     def attribute_field(self, name: str, t: Type) -> GraphQLField:
         return GraphQLField(
             self.translate_type(t),
-            resolver=self.property_resolver(name, t)
+            resolver=self.property_resolver(name)
         )
 
     def function_field(self, name: str, f: Callable) -> GraphQLField:
         hints = get_type_hints(f)
         return_type: Type = hints.pop('return')
-        def resolver(self_, info, **gql_args):
+        def resolver(self_: Any, info: ResolveInfo, **gql_args: Any) -> Any:
             py_args = {}
             for name, value in gql_args.items():
-                py_args[name] = self.gql2py(hints[name], value)
-            return self.py2gql(return_type, f(self_, **py_args))
+                py_args[name] = value
+            return f(self_, **py_args)
         return GraphQLField(
             self.translate_type(return_type),
             args={
@@ -343,24 +344,8 @@ class SchemaCreator:
             types=[self.translate_type_inner(t) for t in args],
         )
 
-    def property_resolver(self, name: str, t: Type) -> Callable:
-        def resolver(self, info):
-            return getattr(self, name)
-        return resolver
-
-    def py2gql(self, pyt: Type, i: Any) -> Any:
-        # TODO I think only enums need to be hacked around here, gql-core
-        # does the rest
-        #gqlt = self.py2gql_types[pyt]
-        #return gqlt.serialize(i)
-        return i
-
-    def gql2py(self, pyt: Type, i: Any) -> Any:
-        # TODO I think only enums need to be hacked around here, gql-core
-        # does the rest
-        #gqlt = self.py2gql_types[pyt]
-        #return gqlt.parse_value(i)
-        return i
+    def property_resolver(self, name: str) -> Callable:
+        return lambda self, info: getattr(self, name)
 
 def make_schema(
     query: Type[Object],
