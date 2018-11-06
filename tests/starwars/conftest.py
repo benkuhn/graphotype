@@ -22,10 +22,12 @@ class Character(Interface):
 
 @dataclass
 class Human(Object, Character):
+    """A humanoid creature in the Star Wars universe."""
     homePlanet: Optional[str]
 
 @dataclass
 class Droid(Object, Character):
+    """A mechanical creature in the Star Wars universe."""
     primaryFunction: Optional[str]
 
 class Query(Object):

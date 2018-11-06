@@ -1,7 +1,5 @@
 from graphql import graphql, format_error
 
-from conftest import *
-
 def test_hero_name_query(schema):
     query = """
         query HeroNameQuery {

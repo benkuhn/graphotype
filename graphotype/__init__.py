@@ -270,6 +270,8 @@ class SchemaCreator:
                 fields[name] = self.attribute_field(name, guessed_type)
 
         for name, typ in hints.items():
+            if name.startswith('_'):
+                continue
             fields[name] = self.attribute_field(name, typ)
         return fields
 
