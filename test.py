@@ -3,7 +3,7 @@ from datetime import datetime
 import graphotype
 import graphql
 import enum
-from typing import Iterable, Optional, NewType, Union
+from typing import Iterable, Optional, NewType, Union, List
 import traceback
 
 class MyEnum(enum.Enum):
@@ -53,10 +53,8 @@ class Foo(graphotype.Object):
     a: Optional[int]
     b = 'foo'
     c = MyEnum.GIRAFFES
-    def d(self) -> Iterable[int]:
-        yield 1
-        yield 2
-        yield 3
+    def d(self) -> List[int]:
+        return [1,2,3]
 
 class Bar(graphotype.Object):
     a: graphotype.ID = 'a'

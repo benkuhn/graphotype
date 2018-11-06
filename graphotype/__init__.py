@@ -4,12 +4,10 @@ import enum
 import functools
 from typing import (
     Type, get_type_hints, Generic, List, Dict, TypeVar, Any, Callable,
-    GenericMeta, Union, NewType, Set, Optional, Iterable, FrozenSet
+    Union, NewType, Set, Optional, Iterable, FrozenSet
 )
-from typing import _Union  # type: ignore
 
 from graphql import (
-    graphql,
     GraphQLSchema,
     GraphQLObjectType,
     GraphQLInterfaceType,
@@ -71,10 +69,16 @@ def unwrap_optional(t: Type) -> Optional[Type]:
 
 
 def is_union(t: Type) -> bool:
-    return isinstance(t, _Union)
+    # py36
+    #return isinstance(t, _Union)
+    return getattr(t, '__origin__', None) == Union
 
 def is_newtype(t: Type) -> bool:
     return hasattr(t, '__supertype__')
+
+def is_iterable_type(t: Type) -> bool:
+    # TODO: python3.6 support
+    return getattr(t, '__origin__', None) == list
 
 ID = NewType('ID', str)
 
@@ -177,17 +181,16 @@ class SchemaCreator:
         return self.translate_type(t).of_type
 
     def _translate_type_impl(self, t: Type) -> GraphQLNamedType:
-        if isinstance(t, GenericMeta):
-            if Iterable in t.__mro__:
-                # TODO: figure out which generic arg represents the sequence
-                # type, in the case of multi-arg generics
-                if len(t.__args__) > 1:
-                    raise NotImplementedError(
-                        "Can't translate {t} because it has multiple type args")
-                [of_type] = t.__args__
-                return GraphQLNonNull(GraphQLList(
-                    self.translate_type(of_type)
-                ))
+        if is_iterable_type(t):
+            # TODO: figure out which generic arg represents the sequence
+            # type, in the case of multi-arg generics
+            if len(t.__args__) > 1:
+                raise NotImplementedError(
+                    "Can't translate {t} because it has multiple type args")
+            [of_type] = t.__args__
+            return GraphQLNonNull(GraphQLList(
+                self.translate_type(of_type)
+            ))
         elif is_union(t):
             inner = unwrap_optional(t)
             if inner is None:
@@ -329,7 +332,7 @@ class SchemaCreator:
             parse_value=supertype.parse_value,
         )
 
-    def map_union(self, t: _Union) -> GraphQLUnionType:
+    def map_union(self, t: Type) -> GraphQLUnionType:
         args = t.__args__
         name = self.unions.get(frozenset(args))
         if name is None:
