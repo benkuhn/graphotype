@@ -7,6 +7,7 @@ from graphotype import make_schema, Object, Scalar
 import pytest
 
 FakeInt = NewType('FakeInt', int)
+FakeDateTime = NewType('FakeDateTime', datetime)
 
 _FORMAT = '%Y-%m-%d %H:%M:%S'
 
@@ -27,6 +28,7 @@ _DATETIME_STR = DateTime.serialize(_DATETIME)
 class Query(Object):
     fake: FakeInt = FakeInt(1)
     dt: datetime = _DATETIME
+    fakeDt: FakeDateTime = FakeDateTime(_DATETIME)
     def add(self, f: FakeInt, dt: datetime) -> FakeInt:
         return FakeInt(int(dt.timestamp())) + f
 
@@ -35,12 +37,26 @@ def schema():
     yield make_schema(
         query=Query, scalars=[DateTime])
 
-def test_custom_scalar_output(schema):
+def test_newtype_scalar_output(schema):
     result = graphql(schema, '''query {
         fake
     }''', root=Query())
     assert not result.errors
     assert result.data == { 'fake': 1 }
+
+def test_custom_scalar_output(schema):
+    result = graphql(schema, '''query {
+        dt
+    }''', root=Query())
+    assert not result.errors
+    assert result.data == { 'dt': _DATETIME_STR }
+
+def test_newtype_of_custom_scalar_output(schema):
+    result = graphql(schema, '''query {
+        fakeDt
+    }''', root=Query())
+    assert not result.errors
+    assert result.data == { 'fakeDt': _DATETIME_STR }
 
 def test_custom_scalar_from_ast(schema):
     result = graphql(schema, '''query {

@@ -321,6 +321,11 @@ class SchemaCreator:
                 t.__name__,
                 BUILTIN_SCALARS[t.__supertype__]
             )
+        elif t.__supertype__ in self.py2gql_types:
+            return self.map_custom_scalar(
+                t.__name__,
+                self.py2gql_types[t.__supertype__]
+            )
         else:
             # just de-alias the newtype I guess
             return self.translate_type(t.__supertype__)
