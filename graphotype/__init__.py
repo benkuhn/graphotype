@@ -114,9 +114,8 @@ def ast_to_value(node: Any) -> Union[int, float, str, bool, List, Dict]:
         return [ast_to_value(v) for v in node.values]
     elif isinstance(node, ast.ObjectValue):
         return {field.name.value: ast_to_value(field.value) for field in node.fields}
-    # TODO handle enum values?
     else:
-        raise NotImplementedError()
+        raise NotImplementedError(repr(node))
 
 def make_scalar_map(scalars: List[Type[Scalar]]) -> Dict[Type, GraphQLScalarType]:
     result = {}
