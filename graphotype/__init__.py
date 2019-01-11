@@ -113,14 +113,14 @@ def ast_to_value(node: Any) -> Union[int, float, str, bool, List, Dict]:
     elif isinstance(node, ast.ListValue):
         return [ast_to_value(v) for v in node.values]
     elif isinstance(node, ast.ObjectValue):
-        return {field.name: ast_to_value(field.value) for field in node.fields}
+        return {field.name.value: ast_to_value(field.value) for field in node.fields}
     # TODO handle enum values?
     else:
         raise NotImplementedError()
 
 def make_scalar_map(scalars: List[Type[Scalar]]) -> Dict[Type, GraphQLScalarType]:
     result = {}
-    for scalar in scalars:
+    def add_scalar_type(scalar):
         result[scalar.t] = GraphQLScalarType(
             name=scalar.__name__,
             description=scalar.__doc__,
@@ -128,6 +128,8 @@ def make_scalar_map(scalars: List[Type[Scalar]]) -> Dict[Type, GraphQLScalarType
             parse_value=lambda val: scalar.parse(val),
             parse_literal=lambda node: scalar.parse(ast_to_value(node))
         )
+    for scalar in scalars:
+        add_scalar_type(scalar)
     return result
 
 class SchemaCreator:
@@ -212,7 +214,8 @@ class SchemaCreator:
             return GraphQLNonNull(BUILTIN_SCALARS[t])
         elif t in self.py2gql_types:
             return GraphQLNonNull(self.py2gql_types[t])
-        raise NotImplementedError(f"Cannot translate {t}")
+        raise NotImplementedError(f"""Cannot translate {t}. Suggestions:
+        - Did you forget to add its scalar mapper to the `scalars` list?""")
 
     def map_type(self, cls: Type[Object]) -> GraphQLObjectType:
         interfaces = [

@@ -1,3 +1,4 @@
+import json
 from typing import NewType, Any
 from datetime import datetime
 
@@ -22,6 +23,14 @@ class DateTime(Scalar[datetime]):
     def serialize(cls, instance: datetime) -> Any:
         return instance.strftime(_FORMAT)
 
+class JSON(Scalar[dict]):
+    t = dict
+
+    @classmethod
+    def parse(cls, value: Any) -> datetime:
+        print('this dict is', value)
+        return dict(value)
+
 _DATETIME = datetime(2019, 1, 10, 23, 35, 7)
 _DATETIME_STR = DateTime.serialize(_DATETIME)
 
@@ -31,11 +40,13 @@ class Query(Object):
     fakeDt: FakeDateTime = FakeDateTime(_DATETIME)
     def add(self, f: FakeInt, dt: datetime) -> FakeInt:
         return FakeInt(int(dt.timestamp())) + f
+    def dumps(self, obj: dict) -> str:
+        return json.dumps(obj, sort_keys=True, indent=2)
 
 @pytest.fixture(scope='module')
 def schema():
     yield make_schema(
-        query=Query, scalars=[DateTime])
+        query=Query, scalars=[DateTime, JSON])
 
 def test_newtype_scalar_output(schema):
     result = graphql(schema, '''query {
@@ -71,3 +82,18 @@ def test_custom_scalar_from_values(schema):
     }''', variable_values=dict(f=1, dt=_DATETIME_STR), root=Query())
     assert not result.errors
     assert result.data == { 'add': 1547174108 }
+
+def test_dict_and_list_from_ast(schema):
+    result = graphql(schema, '''query {
+        dumps(obj: {innerObj: {a: 1}, innerList: ["bar"]} )
+    }''', root=Query())
+    assert not result.errors
+    assert result.data == {
+        'dumps': '{\n'
+                 '  "innerList": [\n'
+                 '    "bar"\n'
+                 '  ],\n'
+                 '  "innerObj": {\n'
+                 '    "a": "1"\n'
+                 '  }\n'
+                 '}'}
