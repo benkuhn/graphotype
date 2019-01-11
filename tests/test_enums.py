@@ -11,7 +11,7 @@ class MyEnum(enum.Enum):
     TWO = 2
 
 class Query(Object):
-    val: MyEnum = MyEnum.ONE
+    val = MyEnum.ONE
     def f(self, val: MyEnum) -> int:
         return val.value
 
