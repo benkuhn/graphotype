@@ -231,7 +231,8 @@ def test_allows_querying_the_schema_for_nested_object_fields(schema):
     assert not result.errors
     assert_contain_subset(result.data, expected)
 
-@pytest.mark.xfail
+# skip because we can't add docstrings to certain things yet.
+@pytest.mark.skip
 def test_allows_querying_the_schema_for_field_args(schema):
     query = """
       query IntrospectionQueryTypeQuery {
