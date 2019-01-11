@@ -28,7 +28,6 @@ class JSON(Scalar[dict]):
 
     @classmethod
     def parse(cls, value: Any) -> datetime:
-        print('this dict is', value)
         return dict(value)
 
 _DATETIME = datetime(2019, 1, 10, 23, 35, 7)
