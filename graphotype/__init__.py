@@ -65,7 +65,7 @@ def unwrap_optional(t: Type) -> Optional[Type]:
     if len(inner_args) == 1:
         return next(iter(inner_args))
     else:
-        return Union[inner_args]
+        return Union[tuple(inner_args)]
 
 
 def is_union(t: Type) -> bool:
@@ -195,7 +195,7 @@ class SchemaCreator:
             inner = unwrap_optional(t)
             if inner is None:
                 # non-Optional union
-                return self.map_union(t)
+                return GraphQLNonNull(self.map_union(t))
             else:
                 return self.translate_type_inner(inner)
         elif is_newtype(t):
