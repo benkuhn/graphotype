@@ -25,7 +25,7 @@ def schema():
     yield make_schema(
         query=Query, unions={'MyUnion': MyUnion})
 
-def test_requiredInt(schema):
+def test_union(schema):
     result = graphql(schema, '''query {
         requiredFoo { ... F ... B }
         requiredBar { ... F ... B }
