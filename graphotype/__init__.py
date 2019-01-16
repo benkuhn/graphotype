@@ -57,31 +57,6 @@ class Object:
 class Interface:
     pass
 
-def unwrap_optional(t: Type) -> Optional[Type]:
-    """If t is Optional[foo] for some foo, return foo, otherwise None"""
-    assert is_union(t)
-    args = t.__args__
-    if type(None) not in args:
-        return None
-    inner_args = set(args) - {type(None)}
-    if len(inner_args) == 1:
-        return next(iter(inner_args))
-    else:
-        return Union[tuple(inner_args)]
-
-
-def is_union(t: Type) -> bool:
-    # py36
-    #return isinstance(t, _Union)
-    return getattr(t, '__origin__', None) == Union
-
-def is_newtype(t: Type) -> bool:
-    return hasattr(t, '__supertype__')
-
-def is_iterable_type(t: Type) -> bool:
-    # TODO: python3.6 support
-    return getattr(t, '__origin__', None) == list
-
 ID = NewType('ID', str)
 
 class WorkingEnumType(GraphQLEnumType):
