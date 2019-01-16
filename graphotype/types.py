@@ -103,7 +103,7 @@ def make_annotation(raw: Optional[Any], parsed: Type) -> Annotation:
             t_raw=raw,
             t=parsed
         )
-    raise ValueError("Don't understand type {type}")
+    raise ValueError(f"Don't understand type {parsed}")
 
 
 

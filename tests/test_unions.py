@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional, Union
 
 from graphql import graphql
@@ -22,8 +24,7 @@ class Query(Object):
 
 @pytest.fixture(scope='module')
 def schema():
-    yield make_schema(
-        query=Query, unions={'MyUnion': MyUnion})
+    yield make_schema(query=Query)
 
 def test_union(schema):
     result = graphql(schema, '''query {

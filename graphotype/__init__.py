@@ -114,13 +114,11 @@ class SchemaCreator:
         query: Type[Object],
         mutation: Optional[Type[Object]],
         scalars: List[Type[Scalar]],
-        unions: Dict[FrozenSet[Type], str]
     ) -> None:
         self.py2gql_types = make_scalar_map(scalars)
         self.type_map: Dict[Type, GraphQLNamedType] = {}
         self.query = query
         self.mutation = mutation
-        self.unions = unions
 
     def build(self) -> GraphQLSchema:
         query = self.map_type(self.query)
@@ -315,12 +313,15 @@ class SchemaCreator:
 
     def map_union(self, ann: types.AUnion) -> GraphQLUnionType:
         args = [of_t.t for of_t in ann.of_types]
-        name = self.unions.get(frozenset(args))
+        name = ann.name
         if name is None:
             raise ValueError(f"""Could not find a name for Union[{args}].
 
-            In GraphQL, any union needs a name--please use the `unions`
-            argument to `make_schema` to supply one.""")
+            In GraphQL, any union needs a name, so all unions must be
+            forward-referenced, e.g.:
+                Person = Union[Manager, Employee]
+                def person(self) -> Optional['Person']: ...
+            """)
         return GraphQLUnionType(
             name=name,
             # translate_type returns a NonNull, but we need the underlying for
@@ -335,9 +336,5 @@ def make_schema(
     query: Type[Object],
     mutation: Optional[Type[Object]] = None,
     scalars: List[Type[Scalar]] = None,
-    unions: Dict[str, Type] = None
 ) -> GraphQLSchema:
-    if unions is None:
-        unions = {}
-    unions_inverted = {frozenset(t.__args__): name for name, t in unions.items()}
-    return SchemaCreator(query, mutation, scalars or [], unions_inverted).build()
+    return SchemaCreator(query, mutation, scalars or []).build()
