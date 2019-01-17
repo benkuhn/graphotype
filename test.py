@@ -74,34 +74,35 @@ MyUnion = Union[Foo, Bar]
 
 schema = graphotype.make_schema(query=Query, mutation=None, scalars=[Date], unions=dict(MyUnion=MyUnion))
 
-print(graphql.print_schema(schema))
+if __name__ == '__main__':
+    print(graphql.print_schema(schema))
 
-query = '''
-query {
-    c(d: true, e: 1.0) {
-        a
-        c
-        d
-    }
-    isGiraffes(g: GIRAFFES)
-    unionReturner {
-        ...on Bar {
+    query = '''
+    query {
+        c(d: true, e: 1.0) {
             a
+            c
+            d
         }
+        isGiraffes(g: GIRAFFES)
+        unionReturner {
+            ...on Bar {
+                a
+            }
+        }
+        interfaceReturner {
+            abstract
+        }
+        process(input: {a: 1, b: GIRAFFES, c: 1})
+        now(a_date: "2018-01-01 02:33:44")
     }
-    interfaceReturner {
-        abstract
-    }
-    process(input: {a: 1, b: GIRAFFES, c: 1})
-    now(a_date: "2018-01-01 02:33:44")
-}
-'''
+    '''
 
-import json
-result = graphql.graphql(schema, query)
-print('Data:', json.dumps(result.data, indent=2))
-print('Errors:', result.errors)
+    import json
+    result = graphql.graphql(schema, query)
+    print('Data:', json.dumps(result.data, indent=2))
+    print('Errors:', result.errors)
 
-if result.errors:
-    for e in result.errors:
-        traceback.print_exception(type(e), e, e.__traceback__)
+    if result.errors:
+        for e in result.errors:
+            traceback.print_exception(type(e), e, e.__traceback__)
