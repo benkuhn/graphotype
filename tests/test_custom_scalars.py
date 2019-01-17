@@ -1,6 +1,6 @@
 import json
 from typing import NewType, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 from graphql import graphql
 from graphotype import make_schema, Object, Scalar
@@ -38,7 +38,7 @@ class Query(Object):
     dt: datetime = _DATETIME
     fakeDt: FakeDateTime = FakeDateTime(_DATETIME)
     def add(self, f: FakeInt, dt: datetime) -> FakeInt:
-        return FakeInt(int(dt.timestamp())) + f
+        return FakeInt(int(dt.replace(tzinfo=timezone.utc).timestamp())) + f
     def dumps(self, obj: dict) -> str:
         return json.dumps(obj, sort_keys=True, indent=2)
 
@@ -73,14 +73,14 @@ def test_custom_scalar_from_ast(schema):
         add(f: 1, dt: "2019-01-10 23:35:07")
     }''', root=Query())
     assert not result.errors
-    assert result.data == { 'add': 1547174108 }
+    assert result.data == { 'add': 1547163308 }
 
 def test_custom_scalar_from_values(schema):
     result = graphql(schema, '''query Q($f: FakeInt!, $dt: DateTime!) {
         add(f: $f, dt: $dt)
     }''', variable_values=dict(f=1, dt=_DATETIME_STR), root=Query())
     assert not result.errors
-    assert result.data == { 'add': 1547174108 }
+    assert result.data == { 'add': 1547163308 }
 
 def test_dict_and_list_from_ast(schema):
     result = graphql(schema, '''query {
