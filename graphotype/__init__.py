@@ -30,6 +30,9 @@ from graphql import (
 from graphql.type.definition import GraphQLNamedType
 from graphql.language import ast
 
+class SchemaError(Exception):
+    """Indicates that the supplied schema was invalid."""
+
 BUILTIN_SCALARS: Dict[Type, GraphQLScalarType] = {
     int: GraphQLInt,
     float: GraphQLFloat,
@@ -345,10 +348,10 @@ class SchemaCreator:
         args = t.__args__
         name = self.unions.get(frozenset(args))
         if name is None:
-            raise ValueError(f"""Could not find a name for {t}.
+            raise SchemaError(f"""Could not find a name for {t}.
 
-            In GraphQL, any union needs a name--please use the `unions`
-            argument to `make_schema` to supply one.""")
+In GraphQL, any union needs a name--please use the `unions`
+argument to `make_schema` to supply one.""")
         return GraphQLUnionType(
             name=name,
             # translate_type returns a NonNull, but we need the underlying for
