@@ -2,7 +2,7 @@ from typing import List
 import json
 
 from dataclasses import dataclass, asdict
-from graphotype import make_schema
+from graphotype import make_schema, Object
 from graphql import graphql
 
 def test_input_type():
@@ -16,7 +16,7 @@ def test_input_type():
         aStr: str
         aSubInput: SubInput
 
-    class Query:
+    class Query(Object):
         def serialize(self, i: MyInput) -> str:
             return json.dumps(asdict(i), sort_keys=True, indent=2)
 

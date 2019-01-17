@@ -149,8 +149,8 @@ class SchemaCreator:
         self.unions = unions
 
     def build(self) -> GraphQLSchema:
-        query = self.map_type(self.query)
-        mutation = self.map_type(self.mutation) if self.mutation else None
+        query = self.translate_type_inner(self.query)
+        mutation = self.translate_type_inner(self.mutation) if self.mutation else None
         # Interface implementations may not have been explicitly referenced in
         # the schema. But their interface must have been--so we want to
         # traverse all interfaces, find their subclasses and explicitly supply
@@ -216,8 +216,9 @@ class SchemaCreator:
             return GraphQLNonNull(BUILTIN_SCALARS[t])
         elif t in self.py2gql_types:
             return GraphQLNonNull(self.py2gql_types[t])
-        raise NotImplementedError(f"""Cannot translate {t}. Suggestions:
-        - Did you forget to add its scalar mapper to the `scalars` list?""")
+        raise SchemaError(f"""Cannot translate {t}. Suggestions:
+- Did you forget to inherit Object?
+- Did you forget to add its scalar mapper to the `scalars` list?""")
 
     def map_type(self, cls: Type[Object]) -> GraphQLObjectType:
         interfaces = [
@@ -333,7 +334,8 @@ class SchemaCreator:
             )
         else:
             # just de-alias the newtype I guess
-            return self.translate_type(t.__supertype__)
+            assert t.__supertype__ in self.type_map
+            return self.translate_type_inner(t.__supertype__)
 
     def map_custom_scalar(self, name: str, supertype: GraphQLScalarType
     ) -> GraphQLScalarType:

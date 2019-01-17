@@ -2,11 +2,11 @@ from typing import List
 import json
 
 from dataclasses import dataclass, asdict
-from graphotype import make_schema
+from graphotype import make_schema, Object
 from graphql import graphql
 
 def test_property():
-    class Query:
+    class Query(Object):
         @property
         def anInt(self) -> int:
             return 1

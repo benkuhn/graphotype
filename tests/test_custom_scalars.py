@@ -1,5 +1,5 @@
 import json
-from typing import NewType, Any
+from typing import NewType, Any, Optional
 from datetime import datetime, timezone
 
 from graphql import graphql
@@ -37,15 +37,28 @@ class Query(Object):
     fake: FakeInt = FakeInt(1)
     dt: datetime = _DATETIME
     fakeDt: FakeDateTime = FakeDateTime(_DATETIME)
+    def subquery(self) -> 'Optional[SubQuery]':
+        return SubQuery(self)
     def add(self, f: FakeInt, dt: datetime) -> FakeInt:
         return FakeInt(int(dt.replace(tzinfo=timezone.utc).timestamp())) + f
     def dumps(self, obj: dict) -> str:
         return json.dumps(obj, sort_keys=True, indent=2)
 
+SubQuery = NewType('SubQuery', Query)
+
 @pytest.fixture(scope='module')
 def schema():
     yield make_schema(
         query=Query, scalars=[DateTime, JSON])
+
+def test_newtype_object(schema):
+    result = graphql(schema, '''query {
+        __schema { queryType { fields { name, type { name }}}}
+    }''')
+    assert not result.errors
+    fields = result.data['__schema']['queryType']['fields']
+    subquery = next(f for f in fields if f['name'] == 'subquery')
+    assert subquery == dict(name='subquery', type=dict(name='Query'))
 
 def test_newtype_scalar_output(schema):
     result = graphql(schema, '''query {
