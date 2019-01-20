@@ -30,6 +30,8 @@ from graphql import (
 from graphql.type.definition import GraphQLNamedType
 from graphql.language import ast
 
+from . import types
+
 class SchemaError(Exception):
     """Indicates that the supplied schema was invalid."""
 
@@ -57,31 +59,6 @@ class Object:
 
 class Interface:
     pass
-
-def unwrap_optional(t: Type) -> Optional[Type]:
-    """If t is Optional[foo] for some foo, return foo, otherwise None"""
-    assert is_union(t)
-    args = t.__args__
-    if type(None) not in args:
-        return None
-    inner_args = set(args) - {type(None)}
-    if len(inner_args) == 1:
-        return next(iter(inner_args))
-    else:
-        return Union[tuple(inner_args)]
-
-
-def is_union(t: Type) -> bool:
-    # py36
-    #return isinstance(t, _Union)
-    return getattr(t, '__origin__', None) == Union
-
-def is_newtype(t: Type) -> bool:
-    return hasattr(t, '__supertype__')
-
-def is_iterable_type(t: Type) -> bool:
-    # TODO: python3.6 support
-    return getattr(t, '__origin__', None) == list
 
 ID = NewType('ID', str)
 
@@ -140,13 +117,11 @@ class SchemaCreator:
         query: Type[Object],
         mutation: Optional[Type[Object]],
         scalars: List[Type[Scalar]],
-        unions: Dict[FrozenSet[Type], str]
     ) -> None:
         self.py2gql_types = make_scalar_map(scalars)
         self.type_map: Dict[Type, GraphQLNamedType] = {}
         self.query = query
         self.mutation = mutation
-        self.unions = unions
 
     def build(self) -> GraphQLSchema:
         query = self.translate_type_inner(self.query)
@@ -166,7 +141,8 @@ class SchemaCreator:
         for interface in list(self.type_map):
             if isinstance(interface, type) and issubclass(interface, Interface):
                 for impl in interface.__subclasses__():
-                    extra_types.append(self.translate_type_inner(impl))
+                    ann = types.AClass(None, impl)
+                    extra_types.append(self.translate_type_inner(ann))
         return GraphQLSchema(
             query=query,
             mutation=mutation,
@@ -174,37 +150,30 @@ class SchemaCreator:
         )
 
 
-    def translate_type(self, t: Type) -> GraphQLNamedType:
-        if t in self.type_map:
-            return self.type_map[t]
-        gt = self._translate_type_impl(t)
-        self.type_map[t] = gt
+    def translate_type(self, ann: types.Annotation) -> GraphQLNamedType:
+        if ann.t in self.type_map:
+            return self.type_map[ann.t]
+        gt = self._translate_type_impl(ann)
+        self.type_map[ann.t] = gt
         return gt
 
-    def translate_type_inner(self, t: Type) -> GraphQLNamedType:
-        return self.translate_type(t).of_type
+    def translate_type_inner(self, ann: types.Annotation) -> GraphQLNamedType:
+        return self.translate_type(ann).of_type
 
-    def _translate_type_impl(self, t: Type) -> GraphQLNamedType:
-        if is_iterable_type(t):
-            # TODO: figure out which generic arg represents the sequence
-            # type, in the case of multi-arg generics
-            if len(t.__args__) > 1:
-                raise NotImplementedError(
-                    "Can't translate {t} because it has multiple type args")
-            [of_type] = t.__args__
+    def _translate_type_impl(self, ann: types.Annotation) -> GraphQLNamedType:
+        if isinstance(ann, types.AList):
             return GraphQLNonNull(GraphQLList(
-                self.translate_type(of_type)
+                self.translate_type(ann.of_type)
             ))
-        elif is_union(t):
-            inner = unwrap_optional(t)
-            if inner is None:
-                # non-Optional union
-                return GraphQLNonNull(self.map_union(t))
-            else:
-                return self.translate_type_inner(inner)
-        elif is_newtype(t):
-            return GraphQLNonNull(self.map_newtype(t))
-        elif issubclass(t, Object):
+        elif isinstance(ann, types.AOptional):
+            return self.translate_type_inner(ann.of_type)
+        elif isinstance(ann, types.AUnion):
+            return GraphQLNonNull(self.map_union(ann))
+        elif isinstance(ann, types.ANewType):
+            return GraphQLNonNull(self.map_newtype(ann))
+        assert isinstance(ann, types.AClass)
+        t = ann.t
+        if issubclass(t, Object):
             return GraphQLNonNull(self.map_type(t))
         elif issubclass(t, Interface):
             return GraphQLNonNull(self.map_interface(t))
@@ -220,9 +189,9 @@ class SchemaCreator:
 - Did you forget to inherit Object?
 - Did you forget to add its scalar mapper to the `scalars` list?""")
 
-    def map_type(self, cls: Type[Object]) -> GraphQLObjectType:
+    def map_type(self, cls: Type) -> GraphQLObjectType:
         interfaces = [
-            t for t in cls.__mro__
+            types.AClass(None, t) for t in cls.__mro__
             if issubclass(t, Interface) and t != cls and t != Interface
         ]
         return GraphQLObjectType(
@@ -254,7 +223,7 @@ class SchemaCreator:
     def map_fields(self, cls: Type[Union[Object, Interface]]
     ) -> Dict[str, GraphQLField]:
         fields = {}
-        hints = get_type_hints(cls)
+        hints = types.get_annotations(cls)
         for name in dir(cls):
             if name.startswith('_'):
                 continue
@@ -273,7 +242,7 @@ class SchemaCreator:
                     # explicitly annotated assignment; will be handled below
                     continue
                 guessed_type = type(value)
-                fields[name] = self.attribute_field(name, guessed_type)
+                fields[name] = self.attribute_field(name, types.AClass(None, guessed_type))
 
         for name, typ in hints.items():
             if name.startswith('_'):
@@ -285,27 +254,27 @@ class SchemaCreator:
         fields = {}
         for field in dataclasses.fields(cls):
             fields[field.name] = GraphQLInputObjectField(
-                type=self.translate_type(field.type)
+                type=self.translate_type(types.make_annotation(None, field.type))
             )
         return fields
 
     def property_field(self, name: str, p: property) -> GraphQLField:
-        return_type: Type = get_type_hints(p.fget)['return']
+        return_type = types.get_annotations(p.fget)['return']
         return GraphQLField(
             self.translate_type(return_type),
             description=p.__doc__,
             resolver=self.property_resolver(name)
         )
 
-    def attribute_field(self, name: str, t: Type) -> GraphQLField:
+    def attribute_field(self, name: str, t: types.Annotation) -> GraphQLField:
         return GraphQLField(
             self.translate_type(t),
             resolver=self.property_resolver(name)
         )
 
     def function_field(self, name: str, f: Callable) -> GraphQLField:
-        hints = get_type_hints(f)
-        return_type: Type = hints.pop('return')
+        hints = types.get_annotations(f)
+        return_type = hints.pop('return')
         def resolver(self_: Any, info: ResolveInfo, **gql_args: Any) -> Any:
             py_args = {}
             for name, value in gql_args.items():
@@ -321,21 +290,21 @@ class SchemaCreator:
             resolver=resolver
         )
 
-    def map_newtype(self, t: Any) -> GraphQLNamedType:
-        if t.__supertype__ in BUILTIN_SCALARS:
+    def map_newtype(self, t: types.ANewType) -> GraphQLNamedType:
+        of_class = t.of_type.t
+        if of_class in BUILTIN_SCALARS:
             return self.map_custom_scalar(
-                t.__name__,
-                BUILTIN_SCALARS[t.__supertype__]
+                t.typename,
+                BUILTIN_SCALARS[of_class]
             )
-        elif t.__supertype__ in self.py2gql_types:
+        elif of_class in self.py2gql_types:
             return self.map_custom_scalar(
-                t.__name__,
-                self.py2gql_types[t.__supertype__]
+                t.typename,
+                self.py2gql_types[of_class]
             )
         else:
             # just de-alias the newtype I guess
-            assert t.__supertype__ in self.type_map
-            return self.translate_type_inner(t.__supertype__)
+            return self.translate_type_inner(t.of_type)
 
     def map_custom_scalar(self, name: str, supertype: GraphQLScalarType
     ) -> GraphQLScalarType:
@@ -346,19 +315,22 @@ class SchemaCreator:
             parse_value=supertype.parse_value,
         )
 
-    def map_union(self, t: Type) -> GraphQLUnionType:
-        args = t.__args__
-        name = self.unions.get(frozenset(args))
+    def map_union(self, ann: types.AUnion) -> GraphQLUnionType:
+        args = [of_t.t for of_t in ann.of_types]
+        name = ann.name
         if name is None:
-            raise SchemaError(f"""Could not find a name for {t}.
+            raise SchemaError(f"""Could not find a name for Union[{args}].
 
-In GraphQL, any union needs a name--please use the `unions`
-argument to `make_schema` to supply one.""")
+In GraphQL, any union needs a name, so all unions must be
+forward-referenced, e.g.:
+    Person = Union[Manager, Employee]
+    def person(self) -> Optional['Person']: ...
+""")
         return GraphQLUnionType(
             name=name,
             # translate_type returns a NonNull, but we need the underlying for
             # our union
-            types=[self.translate_type_inner(t) for t in args],
+            types=[self.translate_type_inner(ann) for ann in ann.of_types],
         )
 
     def property_resolver(self, name: str) -> Callable:
@@ -368,9 +340,5 @@ def make_schema(
     query: Type[Object],
     mutation: Optional[Type[Object]] = None,
     scalars: List[Type[Scalar]] = None,
-    unions: Dict[str, Type] = None
 ) -> GraphQLSchema:
-    if unions is None:
-        unions = {}
-    unions_inverted = {frozenset(t.__args__): name for name, t in unions.items()}
-    return SchemaCreator(query, mutation, scalars or [], unions_inverted).build()
+    return SchemaCreator(query, mutation, scalars or []).build()
