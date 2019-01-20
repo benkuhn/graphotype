@@ -124,8 +124,8 @@ class SchemaCreator:
         self.mutation = mutation
 
     def build(self) -> GraphQLSchema:
-        query = self.translate_type_inner(self.query)
-        mutation = self.translate_type_inner(self.mutation) if self.mutation else None
+        query = self.translate_type_inner(types.AClass(None, self.query))
+        mutation = self.translate_type_inner(types.AClass(None, self.mutation)) if self.mutation else None
         # Interface implementations may not have been explicitly referenced in
         # the schema. But their interface must have been--so we want to
         # traverse all interfaces, find their subclasses and explicitly supply
