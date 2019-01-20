@@ -4,7 +4,7 @@
 
 ## Overview
 
-Define your GraphQL schema in Python3.5+ code using classes and type annotations.
+Define your GraphQL schema in Python3.6+ code using classes and type annotations.
 
 Graphotype is intended as a replacement for [Graphene](https://graphene-python.org/). However, graphotype (like graphene) depends on [graphql-core](https://github.com/graphql-python/graphql-core).
 
@@ -76,6 +76,93 @@ Under the hood, the options for interfaces and unions are discriminated at runti
 In order to determine the set of types which are part of the schema, we recursively traverse all types referenced by the root Query or Mutation types provided to `make_schema` and add all thus-discovered types to the schema.
 
 Additionally, we recursively search for subclasses of all `Interface`s thus discovered and add them to the schema as well. (Why? You might create a class hierarchy of, say, an Animal interface, Dog(Animal) and Cat(Animal); we assume that if you created Dog and Cat, you might want to return them someday wherever Animal is currently part of the interface, even if Dog/Cat are not separately referenced.)
+
+# More Examples
+
+<table>
+<tr>
+    <th>Graphene</th><th>Graphotype</th>
+</tr>
+<tr>
+<td>
+<pre lang="python">
+class Query(graphene.ObjectType):
+    hello = graphene.String(
+        description='A typical hello world'
+    )
+    def resolve_hello(self, info):
+        return 'World'
+</pre>
+</td>
+<td>
+<pre lang="python">
+class Query(graphotype.Object):
+    def hello(self) -> str:
+        """A typical hello world"""
+        return 'World'
+</pre>
+</td>
+</tr>
+
+<tr>
+<td>
+<pre lang="python">
+class Query(graphene.ObjectType):
+    hello = graphene.String(
+        argument=graphene.String(
+            default_value="stranger"
+        )
+    )
+    def resolve_hello(self, info, argument):
+        return 'Hello ' + argument
+</pre>
+</td>
+<td>
+<pre lang="python">
+class Query(graphotype.Object):
+    def hello(
+        self, 
+        argument: str = "stranger"
+    ) -> str:
+        return 'Hello ' + argument
+</pre>
+</td>
+</tr>
+
+<tr>
+<td>
+<pre lang="python">
+class Person(graphene.ObjectType):
+    first_name = graphene.String()
+    last_name = graphene.String()
+    full_name = graphene.String()
+    def resolve_full_name(self, info):
+        return '{} {}'.format(
+            self.first_name, self.last_name
+        )
+</pre>
+</td>
+<td>
+<pre lang="python">
+@dataclass
+class Person(graphotype.Object):
+    first_name: str
+    last_name: str
+    def full_name(self) -> str:
+        return '{} {}'.format(
+            self.first_name, self.last_name
+        )
+</pre>
+Note for this example: Graphotype does not assume anything in particular about
+how to construct any composite types other than input objects (which must be dataclasses). 
+If you just inherit from `graphotype.Object` you don't inherit any constructor;
+you can define it yourself if you like, or use dataclasses for everything (which we recommend).
+</td>
+</tr>
+</table>
+
+
+
 
 # Development on Graphotype itself
 
