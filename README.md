@@ -73,3 +73,15 @@ Under the hood, interfaces and unions are discriminated at runtime where necessa
 In order to determine the set of types which are part of the schema, we recursively traverse all types referenced by the root Query or Mutation types provided to `make_schema` and add all thus-discovered types to the schema.
 
 Additionally, we recursively search for subclasses of all `Interface`s thus discovered and add them to the schema as well. (Why? You might create a class hierarchy of, say, an Animal interface, Dog(Animal) and Cat(Animal); we assume that if you created Dog and Cat, you might want to return them someday wherever Animal is currently part of the interface, even if Dog/Cat are not separately referenced.)
+
+# Development on Graphotype itself
+
+To run the unit tests:
+```
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+pip install -e .
+pytest
+```
