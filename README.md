@@ -64,9 +64,12 @@ type Query {
 - Interfaces are defined as Python classes which derive from `graphotype.Interface`, either directly or indirectly via other interfaces.
 - Object types are defined as Python classes which derive from `graphotype.Object`, plus zero or more interfaces.
 - Input objects are defined as Python [dataclasses](https://docs.python.org/3/library/dataclasses.html) (must be annotated with @dataclass).
-- Unions are defined using `typing.NewType('UnionName', typing.Union[...])`. (We need the NewType to give it a name for use in the schema.)
+- Unions are defined using `EitherAB = typing.Union[A, B]`. 
+  - Unions must be referenced by name, which means using strings ("forward references") in your type annotations when referencing a union. 
+    For example, if `EitherAB` is a Union, you must use `MaybeAB = Optional['EitherAB']` instead of `MaybeAB = Optional[EitherAB]`.
+  - *Note:* If you use Python 3.7+ with `from __future__ import annotations` at the top of your file, this restriction is lifted (because all annotations are interpreted as strings anyway). See `tests/test_unions.py` for examples.
 
-Under the hood, interfaces and unions are discriminated at runtime where necessary using `isinstance` checks.
+Under the hood, the options for interfaces and unions are discriminated at runtime where necessary using `isinstance` checks.
 
 ### What types are included?
 
@@ -76,7 +79,7 @@ Additionally, we recursively search for subclasses of all `Interface`s thus disc
 
 # Development on Graphotype itself
 
-To run the unit tests:
+To run the unit tests (requires python 3.7):
 ```
 python3 -m venv .venv
 source .venv/bin/activate
