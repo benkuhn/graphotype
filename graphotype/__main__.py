@@ -63,7 +63,9 @@ def import_schema(
     If a graphql file, the correct format is:   schema { query: ... }
 
     The output Python code is compatible with python 3.7. Unknown scalar and enum types
-    will appear in the output unchanged.
+    will appear in the output unchanged by default. You can rename them with
+       -r InputName=OutputName
+    on the command line.
     """
     try:
         import jinja2
