@@ -170,7 +170,8 @@ you can define it yourself if you like, or use dataclasses for everything (which
 
 # Import an existing schema
 
-If you already have a GraphQL schema you want to work with, it's easy to get started with Graphotype. Simply install the package, then do
+If you already have a GraphQL schema you want to work with, it's easy to get started with Graphotype. 
+After installing graphotype, you also need to `pip install jinja2 black`, then do
 
 ```bash
 python -m graphotype import [schema_file]
