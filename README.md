@@ -8,8 +8,8 @@ Define your GraphQL schema in Python3.6+ code using classes and type annotations
 
 Graphotype is intended as a replacement for [Graphene](https://graphene-python.org/). However, graphotype (like graphene) depends on [graphql-core](https://github.com/graphql-python/graphql-core).
 
-We recommend use of [mypy](http://mypy-lang.blogspot.com/) alongside this
-library. With appropriate type annotations, mypy will check that your
+We highly recommend use of [mypy](http://mypy-lang.blogspot.com/) alongside this
+library. Using the type annotations you write for your schema, mypy can check that your
 implementation satisfies the schema that you define, which rules out large
 classes of programming errors when implementing your schema.
 
@@ -116,6 +116,9 @@ class Query(graphene.ObjectType):
     def resolve_hello(self, info, argument):
         return 'Hello ' + argument
 </pre>
+
+Here, Graphene requires you both specify `hello`'s type and write its resolver.
+
 </td>
 <td>
 <pre lang="python">
@@ -126,6 +129,9 @@ class Query(graphotype.Object):
     ) -> str:
         return 'Hello ' + argument
 </pre>
+
+With Graphotype, the definitions are one and the same.
+
 </td>
 </tr>
 
