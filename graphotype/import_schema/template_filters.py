@@ -3,7 +3,7 @@ from typing import Mapping
 from .schema_types import TypeRef
 
 # Types that have different Python names than their GQL names
-pytype_mapping: Mapping[str, str] = {
+DEFAULT_RENAMES: Mapping[str, str] = {
     'Int': 'int',
     'String': 'str',
     'Boolean': 'bool',
@@ -11,25 +11,29 @@ pytype_mapping: Mapping[str, str] = {
     'Bytes': 'bytes',
 }
 
-def pytype(t: TypeRef, nonnull=False) -> str:
-    """Render a TypeRef into a string"""
+class TemplateFilters:
+    def __init__(self, renames: Mapping[str, str]) -> None:
+        self.pytype_mapping = {**DEFAULT_RENAMES, **renames}
 
-    if t["kind"] == 'NON_NULL':
-        # Unwrap the nonnull
-        return pytype(t["ofType"], nonnull=True)
+    def pytype(self, t: TypeRef, nonnull=False) -> str:
+        """Render a TypeRef into a string"""
 
-    if t["kind"] == 'LIST':
-        # Wrap 'List[]' around the recursive
-        inner = pytype(t["ofType"], nonnull=True)
-        return f'List[{inner}]'
+        if t["kind"] == 'NON_NULL':
+            # Unwrap the nonnull
+            return self.pytype(t["ofType"], nonnull=True)
 
-    name = t["name"]
-    if name in pytype_mapping:
-        mapped = pytype_mapping[name]
-    else:
-        mapped = name
+        if t["kind"] == 'LIST':
+            # Wrap 'List[]' around the recursive
+            inner = self.pytype(t["ofType"], nonnull=True)
+            return f'List[{inner}]'
 
-    if not nonnull:
-        mapped = f'Optional[{mapped}]'
+        name = t["name"]
+        if name in self.pytype_mapping:
+            mapped = self.pytype_mapping[name]
+        else:
+            mapped = name
 
-    return mapped
+        if not nonnull:
+            mapped = f'Optional[{mapped}]'
+
+        return mapped

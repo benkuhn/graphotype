@@ -1,4 +1,4 @@
-from typing import IO, List
+from typing import IO, List, Tuple
 
 import argparse
 import importlib
@@ -24,6 +24,11 @@ def _add_schema_obj(parser: argparse.ArgumentParser) -> None:
         type=_schema_type
     )
 
+def _rename_type(s: str) -> (str, str):
+    lhs, rhs = s.split('=')
+    return lhs, rhs
+
+
 def dump(schema: GraphQLSchema, json: bool, pretty: bool, file: IO[str]) -> None:
     if json:
         import json as mjson
@@ -47,7 +52,11 @@ def serve(schema: GraphQLSchema, port: int) -> None:
     app.run(port=port)
 
 
-def import_schema(input_schema: IO[str], output: IO[str]) -> None:
+def import_schema(
+        input_schema: IO[str],
+        output: IO[str],
+        rename_type: List[Tuple[str, str]]
+) -> None:
     """Import an existing json or graphql schema file, outputting a matching stub Graphotype file.
 
     If it's a json file, the correct format is: {"data": {"__schema": ...}}
@@ -61,6 +70,8 @@ def import_schema(input_schema: IO[str], output: IO[str]) -> None:
         import black
     except ImportError:
         raise ImportError('jinja2 and black must be installed')
+
+    renames = dict(rename_type)
 
     import json
 
@@ -77,7 +88,7 @@ def import_schema(input_schema: IO[str], output: IO[str]) -> None:
             raise Exception("Please specify a valid JSON introspection or GraphQL schema file to import") from e
 
     from . import import_schema
-    result = import_schema.process(js_ast)
+    result = import_schema.process(js_ast, renames)
 
     try:
         result = black.format_file_contents(result, line_length=80, fast=False)
@@ -130,6 +141,14 @@ def main(argv: List[str]) -> None:
         help="The input schema (in graphql schema or json format)"
     )
     import_parser.add_argument('-o', '--output', type=argparse.FileType('w'), default=sys.stdout)
+    import_parser.add_argument(
+        '-r',
+        '--rename-type',
+        type=_rename_type,
+        action='append',
+        default=[],
+        help="""Rename a scalar or enum type in output. (example: --rename-type Date=datetime)"""
+    )
     import_parser.set_defaults(func=import_schema)
 
     parsed = parser.parse_args(argv)
