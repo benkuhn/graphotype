@@ -1,5 +1,5 @@
 {{ t.name }} = Union[
     {%- for pt in t.possibleTypes %}
-    {{ pt|pytype }},
+    {{ pt|pytype(nonnull=True)|quoted }},
     {%- endfor %}
 ]

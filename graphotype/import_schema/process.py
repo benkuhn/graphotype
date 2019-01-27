@@ -14,8 +14,10 @@ def process(json_schema: Any, renames: Mapping[str, str] = {}) -> str:
     env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(str(import_schema_folder / 'templates'))
     )
+    filters = TemplateFilters(renames)
 
-    env.filters['pytype'] = TemplateFilters(renames).pytype
+    env.filters['pytype'] = filters.pytype
+    env.filters['quoted'] = filters.quoted
 
     schema = json_schema["__schema"]
 

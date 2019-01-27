@@ -37,3 +37,7 @@ class TemplateFilters:
             mapped = f'Optional[{mapped}]'
 
         return mapped
+
+    def quoted(self, s: str) -> str:
+        """Return a quoted s (for Python source code)"""
+        return repr(s)
