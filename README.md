@@ -168,6 +168,16 @@ you can define it yourself if you like, or use dataclasses for everything (which
 </table>
 
 
+# Import an existing schema
+
+If you already have a GraphQL schema you want to work with, it's easy to get started with Graphotype. Simply install the package, then do
+
+```bash
+python -m graphotype import [schema_file]
+```
+
+This works with either .graphql schema format or a JSON introspection-query result, and outputs a Python file for you. 
+See the `--help` of that command for more info.
 
 
 # Development on Graphotype itself
