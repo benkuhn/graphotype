@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, List
+from typing import Optional, List, Any
 
 from mypy_extensions import TypedDict
 
@@ -36,7 +36,7 @@ SchemaType = TypedDict('SchemaType',
                            'description': Optional[str],
                            'fields': Optional[List[Field]],
                            'inputFields': Optional[List[Arg]],
-                           'interfaces': Optional[List['x']],
-                           'enumValues': Optional[List['y']],
+                           'interfaces': Optional[List[TypeRef]],
+                           'enumValues': Optional[List[Any]],   # Not used
                            'possibleTypes': Optional[List[TypeRef]],
                        })

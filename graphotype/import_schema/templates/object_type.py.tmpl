@@ -1,6 +1,10 @@
 
 @dataclass(frozen=True)
-class {{ t.name }}(Object):
+class {{ t.name }}(Object
+{%- for sc in t.interfaces %}
+, {{ sc|pytype(nonnull=True) }}
+{%- endfor %}
+):
     {%- for f in t.fields %}
     {%- if f.args or t.name == 'Query' or t.name == 'Mutation' %}
     def {{f.name}}(self
