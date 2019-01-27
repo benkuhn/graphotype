@@ -1,0 +1,5 @@
+{{ t.name }} = Union[
+    {%- for pt in t.possibleTypes %}
+    {{ pt|pytype }},
+    {%- endfor %}
+]

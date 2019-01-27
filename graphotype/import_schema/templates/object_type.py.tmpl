@@ -1,0 +1,20 @@
+
+@dataclass(frozen=True)
+class {{ t.name }}(Object):
+    {%- for f in t.fields %}
+    {%- if f.args or t.name == 'Query' or t.name == 'Mutation' %}
+    def {{f.name}}(self
+        {% for a in f.args %}
+        ,{{ a.name }}: {{ a.type|pytype }}
+        {%- if a.default_value -%}
+        # = {{ a.default_value }}
+        {%- endif -%}
+
+        {% endfor %}
+    ) -> {{ f.type|pytype }}: ...
+    {%- else %}
+    {{f.name}}: {{ f.type|pytype }}
+    {%- endif %}
+    {%- endfor %}
+
+
