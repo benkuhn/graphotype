@@ -1,4 +1,4 @@
-from typing import Type, NamedTuple, List, Iterable, Iterator, Optional, Any, Dict, get_type_hints, Union
+from typing import Type, List, Iterable, Iterator, Optional, Any, Dict, get_type_hints, Union
 
 try:
     from typing import ForwardRef
@@ -8,7 +8,6 @@ except ImportError:
 
 from dataclasses import dataclass
 import typing_inspect
-from graphql.utils.assert_valid_name import COMPILED_NAME_PATTERN
 
 NoneType = type(None)
 
