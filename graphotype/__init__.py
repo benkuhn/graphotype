@@ -318,7 +318,9 @@ class SchemaCreator:
     def map_union(self, ann: types.AUnion) -> GraphQLUnionType:
         args = [of_t.t for of_t in ann.of_types]
         name = ann.name
-        if name is None:
+
+        from graphql.utils.assert_valid_name import COMPILED_NAME_PATTERN
+        if name is None or not isinstance(name, str) or not COMPILED_NAME_PATTERN.match(name):
             raise SchemaError(f"""Could not find a name for Union[{args}].
 
 In GraphQL, any union needs a name, so all unions must be

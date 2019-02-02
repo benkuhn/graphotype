@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional, Union
 
 from graphql import graphql
@@ -15,10 +17,10 @@ MyUnion = Union[Foo, Bar]
 OptMyUnion = Optional[MyUnion]
 
 class Query(Object):
-    requiredFoo: 'MyUnion' = Foo()
-    requiredBar: 'MyUnion' = Bar()
+    requiredFoo: MyUnion = Foo()
+    requiredBar: MyUnion = Bar()
     optionalFoo: OptMyUnion = None
-    optionalBar: Optional['MyUnion'] = None
+    optionalBar: Optional[MyUnion] = None
 
 @pytest.fixture(scope='module')
 def schema():
@@ -44,7 +46,7 @@ def test_union(schema):
 
 def test_unnamed_union():
     class Query(Object):
-        requiredFoo: MyUnion
+        requiredFoo: Union[int, str]
 
     with pytest.raises(SchemaError) as e:
         make_schema(Query)
