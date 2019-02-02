@@ -124,8 +124,8 @@ class SchemaCreator:
         self.mutation = mutation
 
     def build(self) -> GraphQLSchema:
-        query = self.translate_type_inner(types.AClass(None, self.query))
-        mutation = self.translate_type_inner(types.AClass(None, self.mutation)) if self.mutation else None
+        query = self.translate_type_inner(types.AClass(None, self.query, origin=None))
+        mutation = self.translate_type_inner(types.AClass(None, self.mutation, origin=None)) if self.mutation else None
         # Interface implementations may not have been explicitly referenced in
         # the schema. But their interface must have been--so we want to
         # traverse all interfaces, find their subclasses and explicitly supply
@@ -141,7 +141,7 @@ class SchemaCreator:
         for interface in list(self.type_map):
             if isinstance(interface, type) and issubclass(interface, Interface):
                 for impl in interface.__subclasses__():
-                    ann = types.AClass(None, impl)
+                    ann = types.AClass(None, impl, origin=None)
                     extra_types.append(self.translate_type_inner(ann))
         return GraphQLSchema(
             query=query,
@@ -191,7 +191,7 @@ class SchemaCreator:
 
     def map_type(self, cls: Type) -> GraphQLObjectType:
         interfaces = [
-            types.AClass(None, t) for t in cls.__mro__
+            types.AClass(None, t, origin=None) for t in cls.__mro__
             if issubclass(t, Interface) and t != cls and t != Interface
         ]
         return GraphQLObjectType(
@@ -242,7 +242,7 @@ class SchemaCreator:
                     # explicitly annotated assignment; will be handled below
                     continue
                 guessed_type = type(value)
-                fields[name] = self.attribute_field(name, types.AClass(None, guessed_type))
+                fields[name] = self.attribute_field(name, types.AClass(None, guessed_type, origin=None))
 
         for name, typ in hints.items():
             if name.startswith('_'):
@@ -254,7 +254,7 @@ class SchemaCreator:
         fields = {}
         for field in dataclasses.fields(cls):
             fields[field.name] = GraphQLInputObjectField(
-                type=self.translate_type(types.make_annotation(None, field.type))
+                type=self.translate_type(types.make_annotation(None, field.type, origin=None))
             )
         return fields
 

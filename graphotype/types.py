@@ -12,9 +12,19 @@ import typing_inspect
 NoneType = type(None)
 
 @dataclass
+class AnnotationOrigin:
+    """Where did this Annotation come from? (classname.fieldname)
+
+    Used only for printing error messages.
+    """
+    classname: str
+    fieldname: str
+
+@dataclass
 class Annotation:
     t_raw: Optional[Any]
     t: Type
+    origin: Optional[AnnotationOrigin]
     @property
     def name(self) -> Optional[str]:
         return self.t_raw if isinstance(self.t_raw, str) else None
@@ -70,7 +80,7 @@ def _get_iterable_of(t: Type) -> Optional[Type]:
         return args[0]
     return None
 
-def make_annotation(raw: Optional[Any], parsed: Type) -> Annotation:
+def make_annotation(raw: Optional[Any], parsed: Type, origin: Optional[AnnotationOrigin] = None) -> Annotation:
     """Recursively transform a Python type hint into an Annotation for our schema.
 
     'parsed' should be a result of typing.get_type_hints on something.
@@ -95,7 +105,7 @@ def make_annotation(raw: Optional[Any], parsed: Type) -> Annotation:
             raw_args = [None] * len(args)
 
         of_types = [
-            make_annotation(t_raw, t)
+            make_annotation(t_raw, t, origin)
             for t_raw, t in zip(raw_args, args)
         ]
 
@@ -107,11 +117,12 @@ def make_annotation(raw: Optional[Any], parsed: Type) -> Annotation:
                 # this enables Optional[MyUnion] to work
                 t_raw=unwrapped_raw if is_optional else raw,
                 t=Union[tuple(args)],
-                of_types=of_types
+                of_types=of_types,
+                origin=origin
             )
         if is_optional:
             ann = AOptional(
-                t_raw=raw, t=parsed, of_type=ann
+                t_raw=raw, t=parsed, of_type=ann, origin=origin
             )
         return ann
     nt_of = _get_newtype_of(parsed)
@@ -119,19 +130,22 @@ def make_annotation(raw: Optional[Any], parsed: Type) -> Annotation:
         return ANewType(
             t_raw=raw,
             t=parsed,
-            of_type=make_annotation(None, nt_of)
+            of_type=make_annotation(None, nt_of, origin),
+            origin=origin
         )
     iter_of = _get_iterable_of(parsed)
     if iter_of is not None:
         return AList(
             t_raw=raw,
             t=parsed,
-            of_type=make_annotation(_unwrap_outer_nullable(raw), iter_of)
+            of_type=make_annotation(_unwrap_outer_nullable(raw), iter_of, origin),
+            origin=origin
         )
     if isinstance(parsed, type):
         return AClass(
             t_raw=raw,
-            t=parsed
+            t=parsed,
+            origin=origin
         )
     raise ValueError(f"Don't understand type {parsed}")
 
@@ -202,6 +216,7 @@ def get_annotations(o: Any) -> Dict[str, Annotation]:
     The resulting hints are wrapped in our own Annotation instances."""
     ret = {}
     for k, t in get_type_hints(o).items():
+        origin = AnnotationOrigin(repr(o), k)
         t_raw = o.__annotations__.get(k)
-        ret[k] = make_annotation(t_raw, t)
+        ret[k] = make_annotation(t_raw, t, origin)
     return ret
