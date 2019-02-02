@@ -17,7 +17,7 @@ OptMyUnion = Optional[MyUnion]
 class Query(Object):
     requiredFoo: 'MyUnion' = Foo()
     requiredBar: 'MyUnion' = Bar()
-    optionalFoo: OptMyUnion = None
+    optionalFoo: 'OptMyUnion' = None
     optionalBar: Optional['MyUnion'] = None
 
 @pytest.fixture(scope='module')

@@ -152,6 +152,8 @@ class SchemaCreator:
 
     def translate_type(self, ann: types.Annotation) -> GraphQLNamedType:
         if ann.t in self.type_map:
+            if isinstance(ann, types.AUnion):
+                self.check_union_name(ann)
             return self.type_map[ann.t]
         gt = self._translate_type_impl(ann)
         self.type_map[ann.t] = gt
@@ -315,21 +317,26 @@ class SchemaCreator:
             parse_value=supertype.parse_value,
         )
 
-    def map_union(self, ann: types.AUnion) -> GraphQLUnionType:
-        args = [of_t.t for of_t in ann.of_types]
+    def check_union_name(self, ann: types.AUnion) -> None:
+        """Raise SchemaError if `ann` does not have a proper name."""
         name = ann.name
 
         from graphql.utils.assert_valid_name import COMPILED_NAME_PATTERN
         if name is None or not isinstance(name, str) or not COMPILED_NAME_PATTERN.match(name):
-            raise SchemaError(f"""Could not find a name for Union[{args}].
+            args = [of_t.t for of_t in ann.of_types]
+            raise SchemaError(f"""Could not find a name for Union{args}.
+Defined at {ann.origin.classname}.{ann.origin.fieldname}.
 
 In GraphQL, any union needs a name, so all unions must be
 forward-referenced, e.g.:
     Person = Union[Manager, Employee]
     def person(self) -> Optional['Person']: ...
 """)
+
+    def map_union(self, ann: types.AUnion) -> GraphQLUnionType:
+        self.check_union_name(ann)
         return GraphQLUnionType(
-            name=name,
+            name=ann.name,
             # translate_type returns a NonNull, but we need the underlying for
             # our union
             types=[self.translate_type_inner(ann) for ann in ann.of_types],
