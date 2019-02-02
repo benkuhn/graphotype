@@ -1,7 +1,14 @@
 from typing import Type, NamedTuple, List, Iterable, Iterator, Optional, Any, Dict, get_type_hints, Union
 
+try:
+    from typing import ForwardRef
+except ImportError:
+    # python 3.6 I guess?
+    class ForwardRef: pass
+
 from dataclasses import dataclass
 import typing_inspect
+from graphql.utils.assert_valid_name import COMPILED_NAME_PATTERN
 
 NoneType = type(None)
 
@@ -15,18 +22,24 @@ class Annotation:
 
 @dataclass
 class AUnion(Annotation):
+    """Union[x, y, ...] that is not an Optional"""
     of_types: List[Annotation]
 
 @dataclass
 class AList(Annotation):
+    """List[x]"""
     of_type: Annotation
 
 @dataclass
 class AOptional(Annotation):
+    """Optional[x]"""
     of_type: Annotation
 
 @dataclass
 class ANewType(Annotation):
+    """NewType of another Annotation.
+
+    This uses the same python implementation with a different GraphQL type."""
     of_type: Annotation
     @property
     def typename(self):
@@ -34,6 +47,7 @@ class ANewType(Annotation):
 
 @dataclass
 class AClass(Annotation):
+    """Everything else (Python class -- this can be scalars and object types)"""
     @property
     def typename(self):
         return self.t.__name__
@@ -58,24 +72,41 @@ def _get_iterable_of(t: Type) -> Optional[Type]:
     return None
 
 def make_annotation(raw: Optional[Any], parsed: Type) -> Annotation:
+    """Recursively transform a Python type hint into an Annotation for our schema.
+
+    'parsed' should be a result of typing.get_type_hints on something.
+    'raw', if available, should be the string annotation from __annotations__.
+
+    This is recursive because a type like Union or List references other types.
+    """
     if typing_inspect.is_union_type(parsed):
         args = typing_inspect.get_args(parsed, evaluate=True)
+        # If is_optional is true, wrap the union in an Optional at the end.
         is_optional = NoneType in args
+
         args = [arg for arg in args if arg != NoneType]
-        # special case to ensure Optional['foo'].of_type.name == 'foo' etc.
-        if typing_inspect.is_union_type(raw):
-            raw_args = typing_inspect.get_args(raw)
-            of_types = [
-                make_annotation(t_raw, t)
-                for t_raw, t in zip(raw_args, args)
-            ]
+
+        # Try and unwrap the outermost thing in `raw` because it may be useful later. If we fail, that's ok,
+        # we can fallback to None.
+        unwrapped_raw = _unwrap_outer_nullable(raw)
+
+        if len(args) == 1:
+            raw_args = [unwrapped_raw]
         else:
-            of_types = [make_annotation(None, t) for t in args]
+            raw_args = [None] * len(args)
+
+        of_types = [
+            make_annotation(t_raw, t)
+            for t_raw, t in zip(raw_args, args)
+        ]
+
         if len(of_types) == 1:
             [ann] = of_types
         else:
             ann = AUnion(
-                t_raw=None if is_optional else raw,
+                # interpret 'is_optional' being true as meaning we should use the unwrapped raw
+                # this enables Optional[MyUnion] to work
+                t_raw=unwrapped_raw if is_optional else raw,
                 t=Union[tuple(args)],
                 of_types=of_types
             )
@@ -96,7 +127,7 @@ def make_annotation(raw: Optional[Any], parsed: Type) -> Annotation:
         return AList(
             t_raw=raw,
             t=parsed,
-            of_type=make_annotation(None, iter_of)
+            of_type=make_annotation(_unwrap_outer_nullable(raw), iter_of)
         )
     if isinstance(parsed, type):
         return AClass(
@@ -106,8 +137,70 @@ def make_annotation(raw: Optional[Any], parsed: Type) -> Annotation:
     raise ValueError(f"Don't understand type {parsed}")
 
 
+class UnwrapException(Exception): pass
+
+
+def _unwrap_outer_str(raw: str) -> str:
+    """Parse and unwrap the outermost type and 1 layer of brackets from `raw`,
+     returning whatever is inside the outermost brackets.
+     """
+
+    import re
+    result = re.match(r'^\s*[_a-zA-Z][_a-zA-Z0-9]*\s*\[(.+)\]\s*$', raw, re.DOTALL)
+    if not result:
+        raise UnwrapException(f"unable to match unwrap pattern: {repr(raw)}")
+
+    return result.group(1).strip()
+
+
+def _unwrap_outer(raw: Any) -> Any:
+    """Unwrap one layer of type wrapper from 'raw', which is the raw
+    annotation value from __annotations__ (which should only be a String,
+    or either an Optional or List).
+
+    If `raw` is a string, we use unwrap_outer_str.
+
+    If we fail, raises UnwrapException
+    """
+    if isinstance(raw, str):
+        # If given 'Optional[foo]', give back 'foo'.
+        return _unwrap_outer_str(raw)
+
+    if typing_inspect.is_union_type(raw):
+        # If given Optional['foo'], give back 'foo'.
+        # If given Optional[foo], give back foo.
+        # If given Union[int, str], throw.
+        raw_args = [x for x in typing_inspect.get_args(raw) if x is not NoneType]
+        if len(raw_args) != 1:
+            raise UnwrapException(f"Unwrap_outer ran into a Union: {raw}")
+
+    else:
+        raw_args = typing_inspect.get_args(raw)
+
+    if len(raw_args) != 1:
+        raise UnwrapException(f"Unwrap_outer doesn't know what to do with {len(raw_args)}-arg type: {raw}")
+
+    arg = raw_args[0]
+
+    if isinstance(arg, ForwardRef):
+        # In python3.7, we (might) sometimes get ForwardRefs in here. Unwrap to get the name in that case
+        return arg.__forward_arg__
+    else:
+        return arg
+
+
+def _unwrap_outer_nullable(raw: Any) -> Any:
+    """Same as _unwrap_outer, but catch UnwrapException and return None."""
+    try:
+        return _unwrap_outer(raw)
+    except UnwrapException:
+        return None
+
 
 def get_annotations(o: Any) -> Dict[str, Annotation]:
+    """Call get_type_hints on 'o', wrapping the resulting annotations.
+
+    The resulting hints are wrapped in our own Annotation instances."""
     ret = {}
     for k, t in get_type_hints(o).items():
         t_raw = o.__annotations__.get(k)
