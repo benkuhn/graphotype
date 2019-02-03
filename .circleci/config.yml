@@ -11,12 +11,31 @@ orbs:
           - image: circleci/python:<<parameters.version>>
         steps:
           - checkout
-          - run:
-              name: install tox
-              command: sudo pip install tox
-          - run:
-              name: test
-              command: tox
+          - run: sudo pip install tox
+          - run: tox -- --cov=graphotype
+          - run: mkdir workspace && mv .coverage workspace/.coverage<<parameters.version>>
+          - persist_to_workspace:
+              root: workspace
+              paths:
+                - .coverage<<parameters.version>>
+jobs:
+  coverage:
+    docker:
+      - image: circleci/python:3.7
+    steps:
+      - checkout
+      - attach_workspace:
+          at: workspace
+      - run: sudo pip install coverage coverage-badge
+      - run: coverage combine workspace/.coverage*
+      - run: coverage html
+      - run: coverage-badge -o coverage.svg
+      - store_artifacts:
+          path: htmlcov
+          destination: htmlcov
+      - store_artifacts:
+          path: coverage.svg
+          destination: coverage.svg
 workflows:
   version: 2
   test:
@@ -27,3 +46,7 @@ workflows:
       - tox/test:
           name: test py3.7
           version: "3.7"
+      - coverage:
+          requires:
+            - test py3.6
+            - test py3.7

@@ -18,16 +18,20 @@ class TemplateFilters:
     def pytype(self, t: TypeRef, nonnull=False) -> str:
         """Render a TypeRef into a string"""
 
+        of_type = t.get("ofType")
         if t["kind"] == 'NON_NULL':
             # Unwrap the nonnull
-            return self.pytype(t["ofType"], nonnull=True)
+            assert of_type
+            return self.pytype(of_type, nonnull=True)
 
         if t["kind"] == 'LIST':
             # Wrap 'List[]' around the recursive
-            inner = self.pytype(t["ofType"], nonnull=True)
+            assert of_type
+            inner = self.pytype(of_type, nonnull=True)
             return f'List[{inner}]'
 
         name = t["name"]
+        assert name  # TODO(ben) is this valid?
         if name in self.pytype_mapping:
             mapped = self.pytype_mapping[name]
         else:
