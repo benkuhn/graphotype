@@ -1,0 +1,29 @@
+version: 2.1
+orbs:
+  tox:
+    jobs:
+      test:
+        parameters:
+          version:
+            type: string
+            default: "3.6"
+        docker:
+          - image: circleci/python:<<parameters.version>>
+        steps:
+          - checkout
+          - run:
+              name: install tox
+              command: sudo pip install tox
+          - run:
+              name: test
+              command: tox
+workflows:
+  version: 2
+  test:
+    jobs:
+      - tox/test:
+          name: test py3.6
+          version: "3.6"
+      - tox/test:
+          name: test py3.7
+          version: "3.7"

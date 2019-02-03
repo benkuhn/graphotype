@@ -76,7 +76,7 @@ def _get_iterable_of(t: Type) -> Optional[Type]:
     if not typing_inspect.is_generic_type(t):
         return None
     origin = typing_inspect.get_origin(t)
-    args = typing_inspect.get_args(t)
+    args = typing_inspect.get_args(t, evaluate=True)
     if origin in (list, List, Iterable, Iterator):
         return args[0]
     return None
@@ -186,12 +186,12 @@ def _unwrap_outer(raw: Any) -> Any:
         # If given Optional['foo'], give back 'foo'.
         # If given Optional[foo], give back foo.
         # If given Union[int, str], throw.
-        raw_args = [x for x in typing_inspect.get_args(raw) if x is not NoneType]
+        raw_args = [x for x in typing_inspect.get_args(raw, evaluate=True) if x is not NoneType]
         if len(raw_args) != 1:
             raise UnwrapException(f"Unwrap_outer ran into a Union: {raw}")
 
     else:
-        raw_args = typing_inspect.get_args(raw)
+        raw_args = typing_inspect.get_args(raw, evaluate=True)
 
     if len(raw_args) != 1:
         raise UnwrapException(f"Unwrap_outer doesn't know what to do with {len(raw_args)}-arg type: {raw}")
