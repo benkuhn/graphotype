@@ -6,9 +6,10 @@ jobs:
     steps:
       - checkout
       - run:
-          command: pip install tox
+          name: install tox
+          command: sudo pip install tox
       - run:
-          name: Test
+          name: test
           command: tox
 workflows:
   version: 2
