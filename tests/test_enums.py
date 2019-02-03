@@ -38,7 +38,7 @@ def test_enum_arg_var(schema):
         schema,
         'query Q ($e: MyEnum!) { f(val: $e) }',
         root=Query(),
-        variable_values={'e': 'TWO'}
+        variables={'e': 'TWO'}
     )
     assert not result.errors
     assert result.data == {

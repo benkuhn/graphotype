@@ -30,6 +30,7 @@ from graphql import (
 from graphql.type.definition import GraphQLNamedType
 from graphql.language import ast
 
+from graphotype.types import AnnotationOrigin
 from . import types
 
 class SchemaError(Exception):
@@ -124,8 +125,8 @@ class SchemaCreator:
         self.mutation = mutation
 
     def build(self) -> GraphQLSchema:
-        query = self.translate_type_inner(types.AClass(None, self.query))
-        mutation = self.translate_type_inner(types.AClass(None, self.mutation)) if self.mutation else None
+        query = self.translate_type_inner(types.AClass(None, self.query, origin=None))
+        mutation = self.translate_type_inner(types.AClass(None, self.mutation, origin=None)) if self.mutation else None
         # Interface implementations may not have been explicitly referenced in
         # the schema. But their interface must have been--so we want to
         # traverse all interfaces, find their subclasses and explicitly supply
@@ -141,7 +142,7 @@ class SchemaCreator:
         for interface in list(self.type_map):
             if isinstance(interface, type) and issubclass(interface, Interface):
                 for impl in interface.__subclasses__():
-                    ann = types.AClass(None, impl)
+                    ann = types.AClass(None, impl, origin=None)
                     extra_types.append(self.translate_type_inner(ann))
         return GraphQLSchema(
             query=query,
@@ -152,6 +153,8 @@ class SchemaCreator:
 
     def translate_type(self, ann: types.Annotation) -> GraphQLNamedType:
         if ann.t in self.type_map:
+            if isinstance(ann, types.AUnion):
+                self.check_union_name(ann)
             return self.type_map[ann.t]
         gt = self._translate_type_impl(ann)
         self.type_map[ann.t] = gt
@@ -191,7 +194,7 @@ class SchemaCreator:
 
     def map_type(self, cls: Type) -> GraphQLObjectType:
         interfaces = [
-            types.AClass(None, t) for t in cls.__mro__
+            types.AClass(None, t, origin=None) for t in cls.__mro__
             if issubclass(t, Interface) and t != cls and t != Interface
         ]
         return GraphQLObjectType(
@@ -242,7 +245,7 @@ class SchemaCreator:
                     # explicitly annotated assignment; will be handled below
                     continue
                 guessed_type = type(value)
-                fields[name] = self.attribute_field(name, types.AClass(None, guessed_type))
+                fields[name] = self.attribute_field(name, types.AClass(None, guessed_type, origin=AnnotationOrigin(repr(cls), name)))
 
         for name, typ in hints.items():
             if name.startswith('_'):
@@ -254,7 +257,7 @@ class SchemaCreator:
         fields = {}
         for field in dataclasses.fields(cls):
             fields[field.name] = GraphQLInputObjectField(
-                type=self.translate_type(types.make_annotation(None, field.type))
+                type=self.translate_type(types.make_annotation(None, field.type, origin=AnnotationOrigin(repr(cls), field.name)))
             )
         return fields
 
@@ -315,19 +318,26 @@ class SchemaCreator:
             parse_value=supertype.parse_value,
         )
 
-    def map_union(self, ann: types.AUnion) -> GraphQLUnionType:
-        args = [of_t.t for of_t in ann.of_types]
+    def check_union_name(self, ann: types.AUnion) -> None:
+        """Raise SchemaError if `ann` does not have a proper name."""
         name = ann.name
-        if name is None:
-            raise SchemaError(f"""Could not find a name for Union[{args}].
 
+        from graphql.utils.assert_valid_name import COMPILED_NAME_PATTERN
+        if name is None or not isinstance(name, str) or not COMPILED_NAME_PATTERN.match(name):
+            args = [of_t.t for of_t in ann.of_types]
+            defined_at = "Defined at {ann.origin.classname}.{ann.origin.fieldname}.\n" if ann.origin else ""
+            raise SchemaError(f"""Could not find a name for Union{args}.
+{defined_at} 
 In GraphQL, any union needs a name, so all unions must be
 forward-referenced, e.g.:
     Person = Union[Manager, Employee]
     def person(self) -> Optional['Person']: ...
 """)
+
+    def map_union(self, ann: types.AUnion) -> GraphQLUnionType:
+        self.check_union_name(ann)
         return GraphQLUnionType(
-            name=name,
+            name=ann.name,
             # translate_type returns a NonNull, but we need the underlying for
             # our union
             types=[self.translate_type_inner(ann) for ann in ann.of_types],

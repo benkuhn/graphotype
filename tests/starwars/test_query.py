@@ -122,7 +122,7 @@ def test_fetch_some_id_query(schema):
     """
     params = {"someId": "1000"}
     expected = {"human": {"name": "Luke Skywalker"}}
-    result = graphql(schema, query, variable_values=params)
+    result = graphql(schema, query, variables=params)
     assert not result.errors
     assert result.data == expected
 
@@ -137,7 +137,7 @@ def test_fetch_some_id_query2(schema):
     """
     params = {"someId": "1002"}
     expected = {"human": {"name": "Han Solo"}}
-    result = graphql(schema, query, variable_values=params)
+    result = graphql(schema, query, variables=params)
     assert not result.errors
     assert result.data == expected
 
@@ -152,7 +152,7 @@ def test_invalid_id_query(schema):
     """
     params = {"id": "not a valid id"}
     expected = {"human": None}
-    result = graphql(schema, query, variable_values=params)
+    result = graphql(schema, query, variables=params)
     assert not result.errors
     assert result.data == expected
 
