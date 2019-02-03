@@ -1,0 +1,17 @@
+version: 2
+jobs:
+  test:
+    docker:
+      - image: circleci/python:3.6.7
+    steps:
+      - checkout
+      - run:
+          command: pip install tox
+      - run:
+          name: Test
+          command: tox
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test

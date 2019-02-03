@@ -64,8 +64,8 @@ type Query {
 - Interfaces are defined as Python classes which derive from `graphotype.Interface`, either directly or indirectly via other interfaces.
 - Object types are defined as Python classes which derive from `graphotype.Object`, plus zero or more interfaces.
 - Input objects are defined as Python [dataclasses](https://docs.python.org/3/library/dataclasses.html) (must be annotated with @dataclass).
-- Unions are defined using `EitherAB = typing.Union[A, B]`. 
-  - Unions must be referenced by name, which means using strings ("forward references") in your type annotations when referencing a union. 
+- Unions are defined using `EitherAB = typing.Union[A, B]`.
+  - Unions must be referenced by name, which means using strings ("forward references") in your type annotations when referencing a union.
     For example, if `EitherAB` is a Union, you must use `MaybeAB = Optional['EitherAB']` instead of `MaybeAB = Optional[EitherAB]`.
   - *Note:* If you use Python 3.7+ with `from __future__ import annotations` at the top of your file, this restriction is lifted (because all annotations are interpreted as strings anyway). See `tests/test_unions.py` for examples.
 
@@ -124,7 +124,7 @@ Here, Graphene requires you both specify `hello`'s type and write its resolver.
 <pre lang="python">
 class Query(graphotype.Object):
     def hello(
-        self, 
+        self,
         argument: str = "stranger"
     ) -> str:
         return 'Hello ' + argument
@@ -160,7 +160,7 @@ class Person(graphotype.Object):
         )
 </pre>
 Note for this example: Graphotype does not assume anything in particular about
-how to construct any composite types other than input objects (which must be dataclasses). 
+how to construct any composite types other than input objects (which must be dataclasses).
 If you just inherit from `graphotype.Object` you don't inherit any constructor;
 you can define it yourself if you like, or use dataclasses for everything (which we recommend).
 </td>
@@ -170,25 +170,23 @@ you can define it yourself if you like, or use dataclasses for everything (which
 
 # Import an existing schema
 
-If you already have a GraphQL schema you want to work with, it's easy to get started with Graphotype. 
+If you already have a GraphQL schema you want to work with, it's easy to get started with Graphotype.
 After installing graphotype, you also need to `pip install jinja2 black`, then do
 
 ```bash
 python -m graphotype import [schema_file]
 ```
 
-This works with either .graphql schema format or a JSON introspection-query result, and outputs a Python file for you. 
+This works with either .graphql schema format or a JSON introspection-query result, and outputs a Python file for you.
 See the `--help` of that command for more info.
 
 
 # Development on Graphotype itself
 
-To run the unit tests (requires python 3.7):
+To run the unit tests:
 ```
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
-pip install -e .
-pytest
+pip3 install tox
+tox
 ```
+
+Tox will run the tests against whichever Python versions (>=3.6) you have installed. To test against multiple versions, we recommend using [pyenv](https://github.com/pyenv/pyenv).
