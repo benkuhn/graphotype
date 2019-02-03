@@ -2,6 +2,8 @@
 
 *A concise, type-safe way to write GraphQL backends in Python.*
 
+[![CircleCI](https://circleci.com/gh/benkuhn/graphotype/tree/master.svg?style=svg)](https://circleci.com/gh/benkuhn/graphotype/tree/master)
+
 ## Overview
 
 Define your GraphQL schema in Python3.6+ code using classes and type annotations.
