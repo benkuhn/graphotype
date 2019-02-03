@@ -151,6 +151,12 @@ def make_annotation(raw: Optional[Any], parsed: Any, origin: Optional[Annotation
             origin=origin
         )
     origin = f" (origin: {origin.classname}.{origin.fieldname})" if origin else ''
+
+    # Note: 'parsed' had better not include any ForwardRefs anywhere in it. Our
+    # typing_helpers.get_type_hints implementation guarantees that it fully
+    # evaluates everything, which is not the case for any impls in the stdlib.
+    # If you are getting a ForwardRef here, don't add a case for it here --
+    # instead, make get_type_hints work better. Thanks :)
     raise ValueError(f"Don't understand type {repr(parsed)}{origin}")
 
 
