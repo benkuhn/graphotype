@@ -91,7 +91,7 @@ def test_custom_scalar_from_ast(schema):
 def test_custom_scalar_from_values(schema):
     result = graphql(schema, '''query Q($f: FakeInt!, $dt: DateTime!) {
         add(f: $f, dt: $dt)
-    }''', variable_values=dict(f=1, dt=_DATETIME_STR), root=Query())
+    }''', variables=dict(f=1, dt=_DATETIME_STR), root=Query())
     assert not result.errors
     assert result.data == { 'add': 1547163308 }
 
