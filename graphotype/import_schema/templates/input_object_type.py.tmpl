@@ -1,0 +1,12 @@
+# Input object
+@dataclass(frozen=True)
+class {{ t.name }}:
+    {%- for a in t.inputFields %}
+    {{ a.name }}: {{ a.type|pytype }}
+    {%- if a.default_value -%}
+    # = {{ a.default_value }}
+    {%- endif -%}
+    {% endfor %}
+
+
+

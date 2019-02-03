@@ -1,0 +1,4 @@
+class Query(Object):
+    {% for f in t.fields %}
+    def {{ f.name }}(
+    ):
