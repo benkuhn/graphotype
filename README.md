@@ -191,4 +191,4 @@ pip3 install tox
 tox
 ```
 
-Tox will run the tests against whichever Python versions (>=3.6) you have installed. To test against multiple versions, we recommend using [pyenv](https://github.com/pyenv/pyenv).
+Tox will run the tests against whichever Python versions (>=3.6) you have installed. To test against multiple versions, we recommend using [pyenv](https://github.com/pyenv/pyenv). After installing pyenv, run `pyenv global system 3.7 3.6` to ensure that `python3.7` and `python3.6` are in your `PATH`.
