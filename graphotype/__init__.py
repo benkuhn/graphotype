@@ -30,6 +30,7 @@ from graphql import (
 from graphql.type.definition import GraphQLNamedType
 from graphql.language import ast
 
+from graphotype.types import AnnotationOrigin
 from . import types
 
 class SchemaError(Exception):
@@ -244,7 +245,7 @@ class SchemaCreator:
                     # explicitly annotated assignment; will be handled below
                     continue
                 guessed_type = type(value)
-                fields[name] = self.attribute_field(name, types.AClass(None, guessed_type, origin=None))
+                fields[name] = self.attribute_field(name, types.AClass(None, guessed_type, origin=AnnotationOrigin(repr(cls), name)))
 
         for name, typ in hints.items():
             if name.startswith('_'):
@@ -256,7 +257,7 @@ class SchemaCreator:
         fields = {}
         for field in dataclasses.fields(cls):
             fields[field.name] = GraphQLInputObjectField(
-                type=self.translate_type(types.make_annotation(None, field.type, origin=None))
+                type=self.translate_type(types.make_annotation(None, field.type, origin=AnnotationOrigin(repr(cls), field.name)))
             )
         return fields
 
