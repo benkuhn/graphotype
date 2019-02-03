@@ -216,7 +216,14 @@ def get_annotations(o: Any) -> Dict[str, Annotation]:
     The resulting hints are wrapped in our own Annotation instances."""
     ret = {}
     for k, t in get_type_hints(o).items():
-        origin = AnnotationOrigin(repr(o), k)
+        origin = AnnotationOrigin(type_repr(o), k)
         t_raw = o.__annotations__.get(k)
         ret[k] = make_annotation(t_raw, t, origin)
     return ret
+
+def type_repr(o: Any) -> str:
+    """Try to return a human readable name for a Type."""
+    result = getattr(o, '__name__', repr(o))
+    if hasattr(o, '__module__'):
+        result = f"{o.__module__}.{result}"
+    return result
