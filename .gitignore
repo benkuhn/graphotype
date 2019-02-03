@@ -3,3 +3,4 @@ __pycache__
 graphotype.egg-info
 .coverage
 .venv
+.tox
