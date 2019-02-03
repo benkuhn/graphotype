@@ -12,19 +12,24 @@ dict.
 
 """
 
+from typing import Optional, TypeVar
+
 import sys
+import types
 
 import typing_inspect
 
-# These imports work for 3.7:
-import types
-from types import WrapperDescriptorType, MethodWrapperType, MethodDescriptorType
-from typing import Optional, TypeVar
+_allowed_types = [types.FunctionType, types.BuiltinFunctionType,
+                  types.MethodType, types.ModuleType]
 
-
-_allowed_types = (types.FunctionType, types.BuiltinFunctionType,
-                  types.MethodType, types.ModuleType,
-                  WrapperDescriptorType, MethodWrapperType, MethodDescriptorType)
+if sys.version_info >= (3, 7):
+    from typing import ForwardRef as TypingForwardRef
+    _allowed_types += [
+        types.WrapperDescriptorType, types.MethodWrapperType,
+        types.MethodDescriptorType
+    ]
+else:
+    from typing import _ForwardRef as TypingForwardRef
 
 
 # Hacked version of python3.7's typing.get_type_hints.
@@ -229,7 +234,6 @@ def _type_check(arg, msg, is_argument=True):
 
 def is_forward_ref(t) -> bool:
     """Returns true if `t` is a ForwardRef (either the one we define, or the one in `typing`.)."""
-    from typing import ForwardRef as TypingForwardRef
     return isinstance(t, ForwardRef) or isinstance(t, TypingForwardRef)
 
 def get_forward_ref_str(t):
