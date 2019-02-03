@@ -28,7 +28,7 @@ _allowed_types = (types.FunctionType, types.BuiltinFunctionType,
 
 
 # Hacked version of python3.7's typing.get_type_hints.
-def get_type_hints(obj, globalns=None, localns=None):
+def get_type_hints(obj, ns=None):
     """Return type hints for an object.
 
     This is often the same as obj.__annotations__, but it handles
@@ -65,29 +65,25 @@ def get_type_hints(obj, globalns=None, localns=None):
     if isinstance(obj, type):
         hints = {}
         for base in reversed(obj.__mro__):
-            if globalns is None:
+            if ns is None:
                 base_globals = sys.modules[base.__module__].__dict__
             else:
-                base_globals = globalns
+                base_globals = ns
             ann = base.__dict__.get('__annotations__', {})
             for name, value in ann.items():
                 if value is None:
                     value = type(None)
                 if isinstance(value, str):
                     value = ForwardRef(value, is_argument=False)
-                value = eval_type(value, base_globals, localns)
+                value = eval_type(value, base_globals)
                 hints[name] = value
         return hints
 
-    if globalns is None:
+    if ns is None:
         if isinstance(obj, types.ModuleType):
-            globalns = obj.__dict__
+            ns = obj.__dict__
         else:
-            globalns = getattr(obj, '__globals__', {})
-        if localns is None:
-            localns = globalns
-    elif localns is None:
-        localns = globalns
+            ns = getattr(obj, '__globals__', {})
     hints = getattr(obj, '__annotations__', None)
     if hints is None:
         # Return empty annotations for something that _could_ have them.
@@ -103,7 +99,7 @@ def get_type_hints(obj, globalns=None, localns=None):
             value = type(None)
         if isinstance(value, str):
             value = ForwardRef(value)
-        value = eval_type(value, globalns, localns)
+        value = eval_type(value, ns)
         if name in defaults and defaults[name] is None:
             value = Optional[value]
         hints[name] = value
@@ -111,15 +107,15 @@ def get_type_hints(obj, globalns=None, localns=None):
 
 
 # Hacked version of python3.7.2's typing.eval_type.
-def eval_type(t, globalns, localns):
+def eval_type(t, ns):
     """Recursively evaluate all forward references in the given type t using the given namespace."""
 
     while is_forward_ref(t):
-        t = t._evaluate(globalns, localns)
+        t = t._evaluate(ns, None)
 
     args = typing_inspect.get_args(t, evaluate=True)
     if args:
-        ev_args = tuple(eval_type(a, globalns, localns) for a in args)
+        ev_args = tuple(eval_type(a, ns) for a in args)
         if ev_args == args:
             return t
 
