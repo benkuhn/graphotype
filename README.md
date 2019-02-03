@@ -3,6 +3,7 @@
 *A concise, type-safe way to write GraphQL backends in Python.*
 
 [![CircleCI](https://circleci.com/gh/benkuhn/graphotype/tree/master.svg?style=svg)](https://circleci.com/gh/benkuhn/graphotype/tree/master)
+![coverage](https://circleci.com/api/v1.1/project/github/benkuhn/graphotype/latest/artifacts/0/coverage.svg?circle-token=ddf8663d16d6a06c0d66fdbfead17d17d86ba6f6&branch=master&filter=completed)
 
 ## Overview
 
