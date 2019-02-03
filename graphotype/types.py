@@ -1,3 +1,4 @@
+import typing
 from typing import Type, List, Iterable, Iterator, Optional, Any, Dict, get_type_hints, Union
 
 try:
@@ -7,6 +8,8 @@ except ImportError:
 
 from dataclasses import dataclass
 import typing_inspect
+
+from graphotype.typing_helpers import is_forward_ref, get_forward_ref_str
 
 NoneType = type(None)
 
@@ -82,11 +85,12 @@ def _get_iterable_of(t: Type) -> Optional[Type]:
 def make_annotation(raw: Optional[Any], parsed: Type, origin: Optional[AnnotationOrigin] = None) -> Annotation:
     """Recursively transform a Python type hint into an Annotation for our schema.
 
-    'parsed' should be a result of typing.get_type_hints on something.
+    'parsed' should be a result of typing_helpers.get_type_hints on something.
     'raw', if available, should be the string annotation from __annotations__.
 
     This is recursive because a type like Union or List references other types.
     """
+
     if typing_inspect.is_union_type(parsed):
         args = typing_inspect.get_args(parsed, evaluate=True)
         # If is_optional is true, wrap the union in an Optional at the end.
@@ -146,7 +150,14 @@ def make_annotation(raw: Optional[Any], parsed: Type, origin: Optional[Annotatio
             t=parsed,
             origin=origin
         )
-    raise ValueError(f"Don't understand type {parsed}")
+    origin = f" (origin: {origin.classname}.{origin.fieldname})" if origin else ''
+
+    # Note: 'parsed' had better not include any ForwardRefs anywhere in it. Our
+    # typing_helpers.get_type_hints implementation guarantees that it fully
+    # evaluates everything, which is not the case for any impls in the stdlib.
+    # If you are getting a ForwardRef here, don't add a case for it here --
+    # instead, make get_type_hints work better. Thanks :)
+    raise ValueError(f"Don't understand type {repr(parsed)}{origin}")
 
 
 class UnwrapException(Exception): pass
@@ -194,9 +205,9 @@ def _unwrap_outer(raw: Any) -> Any:
 
     arg = raw_args[0]
 
-    if isinstance(arg, ForwardRef):
+    if is_forward_ref(arg):
         # In python3.7, we (might) sometimes get ForwardRefs in here. Unwrap to get the name in that case
-        return arg.__forward_arg__
+        return get_forward_ref_str(arg)
     else:
         return arg
 
