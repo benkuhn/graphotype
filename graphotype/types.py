@@ -3,8 +3,7 @@ from typing import Type, List, Iterable, Iterator, Optional, Any, Dict, get_type
 try:
     from typing import ForwardRef
 except ImportError:
-    # python 3.6 I guess?
-    class ForwardRef: pass
+    from typing import _ForwardRef as ForwardRef
 
 from dataclasses import dataclass
 import typing_inspect
