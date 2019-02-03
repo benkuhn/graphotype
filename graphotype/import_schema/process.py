@@ -25,7 +25,7 @@ def process(json_schema: Any, renames: Mapping[str, str] = {}) -> str:
     out = topoffile.render()
 
     t: SchemaType
-    for t in schema['types']:
+    for t in sorted(schema['types'], key=lambda t: t['name']):
 
         if t['name'].startswith('__'):
             # skip internal types
