@@ -14,12 +14,10 @@ class Bar(Object):
     b: str = 'b'
 
 MyUnion = Union[Foo, Bar]
-OptMyUnion = Optional[MyUnion]
 
 class Query(Object):
     requiredFoo: MyUnion = Foo()
     requiredBar: MyUnion = Bar()
-    optionalFoo: OptMyUnion = None
     optionalBar: Optional[MyUnion] = None
 
 @pytest.fixture(scope='module')
@@ -30,7 +28,6 @@ def test_union(schema):
     result = graphql(schema, '''query {
         requiredFoo { ... F ... B }
         requiredBar { ... F ... B }
-        optionalFoo { ... F ... B }
         optionalBar { ... F ... B }
     }
     fragment F on Foo { i }
@@ -40,7 +37,6 @@ def test_union(schema):
     assert result.data == {
         'requiredFoo': { 'i': 1 },
         'requiredBar': { 'b': 'b' },
-        'optionalFoo': None,
         'optionalBar': None
     }
 
