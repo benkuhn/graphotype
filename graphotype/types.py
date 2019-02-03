@@ -88,7 +88,7 @@ def _get_iterable_of(t: Type) -> Optional[Type]:
         return args[0]
     return None
 
-def make_annotation(raw: Optional[Any], parsed: Any, origin: Optional[AnnotationOrigin] = None) -> Annotation:
+def make_annotation(raw: Optional[Any], parsed: Type, origin: Optional[AnnotationOrigin] = None) -> Annotation:
     """Recursively transform a Python type hint into an Annotation for our schema.
 
     'parsed' should be a result of typing_helpers.get_type_hints on something.
@@ -157,6 +157,12 @@ def make_annotation(raw: Optional[Any], parsed: Any, origin: Optional[Annotation
             origin=origin
         )
     origin_desc = f" (origin: {origin.classname}.{origin.fieldname})" if origin else ''
+
+    # Note: 'parsed' had better not include any ForwardRefs anywhere in it. Our
+    # typing_helpers.get_type_hints implementation guarantees that it fully
+    # evaluates everything, which is not the case for any impls in the stdlib.
+    # If you are getting a ForwardRef here, don't add a case for it here --
+    # instead, make get_type_hints work better. Thanks :)
     raise ValueError(f"Don't understand type {repr(parsed)}{origin_desc}")
 
 

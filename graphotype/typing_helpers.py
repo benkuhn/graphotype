@@ -50,20 +50,13 @@ def get_type_hints(obj, ns=None):
     annotations, and an empty dictionary is returned if no annotations are
     present.
 
-    BEWARE -- the behavior of globalns and localns is counterintuitive
-    (unless you are familiar with how eval() and exec() work).  The
-    search order is locals first, then globals.
-
-    - If no dict arguments are passed, an attempt is made to use the
+    - If no ns is passed, an attempt is made to use the
       globals from obj (or the respective module's globals for classes),
       and these are also used as the locals.  If the object does not appear
       to have globals, an empty dictionary is used.
 
-    - If one dict argument is passed, it is used for both globals and
+    - If 'ns' is passed, it is used for both globals and
       locals.
-
-    - If two dict arguments are passed, they specify globals and
-      locals, respectively.
     """
 
     if getattr(obj, '__no_type_check__', None):
