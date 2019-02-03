@@ -23,7 +23,7 @@ workflows:
     jobs:
       - tox/test:
           name: test py3.6
-          version: 3.6
+          version: "3.6"
       - tox/test:
           name: test py3.7
-          version: 3.7
+          version: "3.7"
