@@ -82,7 +82,7 @@ def _get_iterable_of(t: Type) -> Optional[Type]:
         return args[0]
     return None
 
-def make_annotation(raw: Optional[Any], parsed: Any, origin: Optional[AnnotationOrigin] = None) -> Annotation:
+def make_annotation(raw: Optional[Any], parsed: Type, origin: Optional[AnnotationOrigin] = None) -> Annotation:
     """Recursively transform a Python type hint into an Annotation for our schema.
 
     'parsed' should be a result of typing_helpers.get_type_hints on something.
