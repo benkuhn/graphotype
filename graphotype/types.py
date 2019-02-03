@@ -1,17 +1,23 @@
-import typing
-from typing import Type, List, Iterable, Iterator, Optional, Any, Dict, get_type_hints, Union
+from typing import Type, List, Iterable, Iterator, Optional, Any, Dict, get_type_hints, Union, TYPE_CHECKING
 
-try:
-    from typing import ForwardRef
-except ImportError:
-    from typing import _ForwardRef as ForwardRef
+if TYPE_CHECKING:
+    class ForwardRef:
+        __forward_arg__: str
+else:
+    try:
+        from typing import ForwardRef
+    except ImportError:
+        from typing import _ForwardRef as ForwardRef
 
 from dataclasses import dataclass
 import typing_inspect
 
 from graphotype.typing_helpers import is_forward_ref, get_forward_ref_str
 
-NoneType = type(None)
+if TYPE_CHECKING:
+    NoneType: Type
+else:
+    NoneType = type(None)
 
 @dataclass
 class AnnotationOrigin:
@@ -150,8 +156,8 @@ def make_annotation(raw: Optional[Any], parsed: Any, origin: Optional[Annotation
             t=parsed,
             origin=origin
         )
-    origin = f" (origin: {origin.classname}.{origin.fieldname})" if origin else ''
-    raise ValueError(f"Don't understand type {repr(parsed)}{origin}")
+    origin_desc = f" (origin: {origin.classname}.{origin.fieldname})" if origin else ''
+    raise ValueError(f"Don't understand type {repr(parsed)}{origin_desc}")
 
 
 class UnwrapException(Exception): pass

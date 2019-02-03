@@ -12,7 +12,7 @@ dict.
 
 """
 
-from typing import Optional, TypeVar
+from typing import Optional, TypeVar, TYPE_CHECKING
 
 import sys
 import types
@@ -22,7 +22,9 @@ import typing_inspect
 _allowed_types = [types.FunctionType, types.BuiltinFunctionType,
                   types.MethodType, types.ModuleType]
 
-if sys.version_info >= (3, 7):
+if TYPE_CHECKING:
+    class TypingForwardRef: pass
+elif sys.version_info >= (3, 7):
     from typing import ForwardRef as TypingForwardRef
     _allowed_types += [
         types.WrapperDescriptorType, types.MethodWrapperType,

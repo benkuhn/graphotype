@@ -24,7 +24,7 @@ def _add_schema_obj(parser: argparse.ArgumentParser) -> None:
         type=_schema_type
     )
 
-def _rename_type(s: str) -> (str, str):
+def _rename_type(s: str) -> Tuple[str, str]:
     lhs, rhs = s.split('=')
     return lhs, rhs
 
@@ -89,8 +89,8 @@ def import_schema(
             # Ok, that didn't work either -- throw it back to the user
             raise Exception("Please specify a valid JSON introspection or GraphQL schema file to import") from e
 
-    from . import import_schema
-    result = import_schema.process(js_ast, renames)
+    from . import import_schema as mod
+    result = mod.process(js_ast, renames)
 
     try:
         result = black.format_file_contents(result, line_length=80, fast=False)
