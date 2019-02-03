@@ -255,10 +255,12 @@ class SchemaCreator:
 
     def map_input_fields(self, cls: Type) -> Dict[str, GraphQLInputObjectField]:
         fields = {}
+        hints = types.get_annotations(cls)
         for field in dataclasses.fields(cls):
-            fields[field.name] = GraphQLInputObjectField(
-                type=self.translate_type(types.make_annotation(None, field.type, origin=AnnotationOrigin(repr(cls), field.name)))
-            )
+            if field.name not in hints:
+                raise SchemaError(f"""No type hint found for {cls}.{field}.
+Suggestion: add a type hint (e.g., ': {field.type or '<type>'} = ...' to your declaration.""")
+            fields[field.name] = GraphQLInputObjectField(type=self.translate_type(hints[field.name]))
         return fields
 
     def property_field(self, name: str, p: property) -> GraphQLField:
