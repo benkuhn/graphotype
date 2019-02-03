@@ -3,7 +3,7 @@ import dataclasses
 import enum
 import functools
 from typing import (
-    Type, get_type_hints, Generic, List, Dict, TypeVar, Any, Callable,
+    Type, Generic, List, Dict, TypeVar, Any, Callable,
     Union, NewType, Set, Optional, Iterable, FrozenSet
 )
 
@@ -325,7 +325,7 @@ class SchemaCreator:
         from graphql.utils.assert_valid_name import COMPILED_NAME_PATTERN
         if name is None or not isinstance(name, str) or not COMPILED_NAME_PATTERN.match(name):
             args = [of_t.t for of_t in ann.of_types]
-            defined_at = "Defined at {ann.origin.classname}.{ann.origin.fieldname}.\n" if ann.origin else ""
+            defined_at = f"Defined at {ann.origin.classname}.{ann.origin.fieldname}.\n" if ann.origin else ""
             raise SchemaError(f"""Could not find a name for Union{args}.
 {defined_at} 
 In GraphQL, any union needs a name, so all unions must be
