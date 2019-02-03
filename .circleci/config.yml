@@ -28,6 +28,7 @@ jobs:
           at: workspace
       - run: sudo pip install coverage coverage-badge
       - run: coverage combine workspace/.coverage*
+      - run: coverage html
       - run: coverage-badge -o coverage.svg
       - store_artifacts:
           path: htmlcov
