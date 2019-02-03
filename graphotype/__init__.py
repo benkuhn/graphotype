@@ -326,10 +326,10 @@ Suggestion: add a type hint (e.g., ': {field.type or '<type>'} = ...' to your de
 
         from graphql.utils.assert_valid_name import COMPILED_NAME_PATTERN
         if name is None or not isinstance(name, str) or not COMPILED_NAME_PATTERN.match(name):
-            args = [of_t.t for of_t in ann.of_types]
+            args = [types.type_repr(of_t.t) for of_t in ann.of_types]
             defined_at = f"Defined at {ann.origin.classname}.{ann.origin.fieldname}.\n" if ann.origin else ""
             raise SchemaError(f"""Could not find a name for Union{args}.
-{defined_at} 
+{defined_at}
 In GraphQL, any union needs a name, so all unions must be
 forward-referenced, e.g.:
     Person = Union[Manager, Employee]

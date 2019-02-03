@@ -1,14 +1,15 @@
 import typing
-from typing import Type, List, Iterable, Iterator, Optional, Any, Dict, Union
+from typing import Type, List, Iterable, Iterator, Optional, Any, Dict, get_type_hints, Union
 
-from graphotype.typing_helpers import is_forward_ref, get_forward_ref_str
-
-# alternatives:
-from graphotype.typing_helpers import get_type_hints, ForwardRef
-#from typing import get_type_hints, ForwardRef
+try:
+    from typing import ForwardRef
+except ImportError:
+    from typing import _ForwardRef as ForwardRef
 
 from dataclasses import dataclass
 import typing_inspect
+
+from graphotype.typing_helpers import is_forward_ref, get_forward_ref_str
 
 NoneType = type(None)
 
@@ -219,7 +220,14 @@ def get_annotations(o: Any) -> Dict[str, Annotation]:
     The resulting hints are wrapped in our own Annotation instances."""
     ret = {}
     for k, t in get_type_hints(o).items():
-        origin = AnnotationOrigin(repr(o), k)
+        origin = AnnotationOrigin(type_repr(o), k)
         t_raw = o.__annotations__.get(k)
         ret[k] = make_annotation(t_raw, t, origin)
     return ret
+
+def type_repr(o: Any) -> str:
+    """Try to return a human readable name for a Type."""
+    result = getattr(o, '__name__', repr(o))
+    if hasattr(o, '__module__'):
+        result = f"{o.__module__}.{result}"
+    return result
