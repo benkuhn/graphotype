@@ -15,13 +15,18 @@ graphene.types.typemap.TypeMap.get_field_type = new_get_field_type
 
 
 class Adapter(SchemaCreator):
-    def __init__(self):
+    def __init__(self, query):
         super().__init__(None, None, [])
+        self.query = query
 
     def adapt(self, t):
         return self.translate_type(t).of_type
 
     def translate_type(self, t):
         if issubclass(t, graphene.ObjectType):
-            return lambda: None
+            return t
         return super().translate_type(t)
+
+    @property
+    def schema(self):
+        return graphene.Schema(query=self.query)
