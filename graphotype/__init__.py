@@ -195,14 +195,11 @@ class SchemaCreator:
     def translate_annotation_unwrapped(self, ann: types.Annotation) -> GraphQLNamedType:
         return self.translate_annotation(ann).of_type
 
-    def get_interfaces(self, cls: Type) -> List[types.AClass]:
-        return [
+    def map_type(self, cls: Type) -> GraphQLObjectType:
+        interfaces = [
             types.AClass(None, t, origin=None) for t in cls.__mro__
             if issubclass(t, Interface) and t != cls and t != Interface
         ]
-
-    def map_type(self, cls: Type) -> GraphQLObjectType:
-        interfaces = self.get_interfaces(cls)
         return GraphQLObjectType(
             name=cls.__name__,
             description=cls.__doc__,
