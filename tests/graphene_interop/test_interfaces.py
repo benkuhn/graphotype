@@ -13,9 +13,6 @@ class Query(gt.Object):
     def gnVal(self) -> 'Node':
         return GnImpl()
 
-    hack: 'GtImpl'
-    hack2: 'GnImpl'
-
 
 class Node(gn.Interface):
     value = gn.Int()
@@ -51,7 +48,4 @@ def test_cross_boundary_implementation():
 
     result = graphql(schema, '{ __type(name: "Node") { possibleTypes { name } } }')
     assert not result.errors
-    print(result.data)
-    assert result.data['__type']['possibleTypes'] == [
-        {'name': 'GtImpl'}, {'name': 'GnImpl'}
-    ]
+    assert set(x['name'] for x in result.data['__type']['possibleTypes']) == {'GtImpl', 'GnImpl'}
