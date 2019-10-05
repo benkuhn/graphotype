@@ -173,6 +173,9 @@ class SchemaCreator:
             return GraphQLNonNull(self.map_newtype(ann))
         assert isinstance(ann, types.AClass)
         t = ann.t
+        return self.translate_type(t)
+
+    def translate_type(self, t: Type) -> GraphQLNamedType:
         if issubclass(t, Object):
             return GraphQLNonNull(self.map_type(t))
         elif issubclass(t, Interface):

@@ -14,9 +14,9 @@ def test_interop():
         def a_property(self) -> str:
             return 'value'
 
-        @property
-        def a_subobject(self) -> SubObject:
-            return SubObject(goodbye='See ya!')
+        #@property
+        #def a_subobject(self) -> SubObject:
+        #    return SubObject(goodbye='See ya!')
 
     class Query(ObjectType):
         # this defines a Field `hello` in our Schema with a single Argument `name`
@@ -32,5 +32,8 @@ def test_interop():
             return Graphotype()
 
     schema = Schema(query=Query)
+
+    result = schema.execute('{ graphotype { a_property }}')
+    assert result.data == {'graphotype': {'a_property': 'value'}}
 
     result = schema.execute('{ graphotype { a_property, a_subobject { goodbye } }')
