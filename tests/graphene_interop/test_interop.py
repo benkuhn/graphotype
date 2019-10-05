@@ -3,7 +3,7 @@ from graphene import ObjectType, String, Schema, Field
 from graphql import graphql
 
 from graphotype import Object
-from graphotype.graphene import Adapter
+from graphotype.graphene import InteropSchemaCreator
 
 def test_interop():
     class Query(ObjectType):
@@ -19,8 +19,6 @@ def test_interop():
         def resolve_graphotype(root, info):
             return Graphotype()
 
-    adapter = Adapter(Query)
-
     class SubObject(ObjectType):
         goodbye = String()
 
@@ -33,7 +31,7 @@ def test_interop():
         def a_subobject(self) -> SubObject:
             return SubObject(goodbye='See ya!')
 
-    schema = adapter.schema
+    schema = InteropSchemaCreator(Query).build()
 
     result = graphql(schema, '{ graphotype { a_property }}')
     assert not result.errors
