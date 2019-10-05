@@ -1,18 +1,11 @@
+"""graphene <> graphotype interop for incremental migration."""
+
 from graphql.type.definition import GraphQLNamedType, GraphQLNonNull
 
 from graphotype.types import Annotation, AClass
 from . import SchemaCreator, Object
 
 import graphene.types.typemap
-
-old_get_field_type = graphene.types.typemap.TypeMap.get_field_type
-
-def new_get_field_type(self, map, type):
-    if isinstance(type, GraphQLNamedType):
-        return type
-    return old_get_field_type(self, map, type)
-
-graphene.types.typemap.TypeMap.get_field_type = new_get_field_type
 
 
 class InteropTypeMap(graphene.types.typemap.TypeMap):
