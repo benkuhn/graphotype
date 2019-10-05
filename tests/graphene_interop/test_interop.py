@@ -1,28 +1,24 @@
 
-from graphene import ObjectType, String, Schema, Field
+import graphene as gn
+import graphotype as gt
 from graphql import graphql
 
-from graphotype import Object
 from graphotype.graphene import InteropSchemaCreator
 
-def test_interop():
-    class Query(ObjectType):
-        # this defines a Field `hello` in our Schema with a single Argument `name`
-        hello = String(name=String(default_value="stranger"))
-        graphotype = Field(lambda: Graphotype)
+def test_basic_interop():
+    class Query(gn.ObjectType):
+        graphotype = gn.Field(lambda: Graphotype)
 
-        # our Resolver method takes the GraphQL context (root, info) as well as
-        # Argument (name) for the Field and returns data for the query Response
         def resolve_hello(root, info, name):
             return f'Hello {name}!'
 
         def resolve_graphotype(root, info):
             return Graphotype()
 
-    class SubObject(ObjectType):
-        goodbye = String()
+    class SubObject(gn.ObjectType):
+        goodbye = gn.String()
 
-    class Graphotype(Object):
+    class Graphotype(gt.Object):
         @property
         def a_property(self) -> str:
             return 'value'
@@ -40,3 +36,4 @@ def test_interop():
     result = graphql(schema, '{ graphotype { a_property, a_subobject { goodbye } } }')
     assert not result.errors
     assert result.data == {'graphotype': {'a_property': 'value', 'a_subobject': {'goodbye': 'See ya!'}}}
+

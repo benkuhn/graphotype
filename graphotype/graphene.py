@@ -51,10 +51,11 @@ classes:
 understand graphotype types in `graphene.Field` instances.
 
 """
+from typing import Type, List
 
 from graphql.type.definition import GraphQLNamedType, GraphQLNonNull
 
-from graphotype.types import Annotation, AClass
+from . import types, Interface
 from . import SchemaCreator, Object
 
 import graphene.types.typemap
@@ -67,11 +68,16 @@ class InteropTypeMap(graphene.types.typemap.TypeMap):
 
     def reducer(self, map, type):
         assert map is self.sc.name_map
-        if issubclass(type, Object):
+        if issubclass(type, (Object, Interface)):
+            return self.graphene_reducer(map, type)
+        return super().reducer()
+
+    def graphene_reducer(self, map, type):
+        if issubclass(type, (Object, Interface)):
             # Put `type` in the SchemaCreator's typemap.
-            self.sc.translate_annotation_unwrapped(AClass(None, type, None))
+            self.sc.translate_annotation_unwrapped(types.AClass(None, type, None))
             return map
-        return super().reducer(map, type)
+        return super().graphene_reducer(map, type)
 
     def get_field_type(self, map, type):
         assert map is self.sc.name_map
@@ -89,18 +95,35 @@ class InteropSchemaCreator(SchemaCreator):
         return self.translate_type(t).of_type
 
     def translate_type(self, t):
-        if graphene.types.typemap.is_graphene_type(t):
+        if graphene.types.typemap.is_graphene_type(t) and not issubclass(t, InteropInterface):
             tm = InteropTypeMap(self)
             new_name_map = tm.graphene_reducer(self.name_map, t)
             assert new_name_map is self.name_map
             return GraphQLNonNull(self.name_map[t._meta.name])
         return super().translate_type(t)
 
-    def translate_annotation_unwrapped(self, ann: Annotation) -> GraphQLNamedType:
+    def translate_annotation_unwrapped(self, ann: types.Annotation) -> GraphQLNamedType:
         result = super().translate_annotation_unwrapped(ann)
         self.name_map[result.name] = result
         return result
 
+    # def get_interfaces(self, cls: Type) -> List[types.AClass]:
+    #     return super().get_interfaces(cls) + [
+    #         types.AClass(None, t, origin=None) for t in cls.__mro__
+    #         if issubclass(t, graphene.Interface) and t != cls and t != graphene.Interface
+    #     ]
+
+    # def map_fields(self, cls):
+    #     super().map_fields(cls)
+    #     if issubclass(cls, InteropInterface):
+    #         pass
+
     @property
     def schema(self):
         return self.build()
+
+
+class InteropInterface(Interface, graphene.Interface):
+
+    def __init__(self) -> None:
+        pass
