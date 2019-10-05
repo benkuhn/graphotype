@@ -1,5 +1,7 @@
 
 from graphene import ObjectType, String, Schema, Field
+from graphql import graphql
+
 from graphotype import Object
 from graphotype.graphene import Adapter
 
@@ -7,7 +9,7 @@ def test_interop():
     class Query(ObjectType):
         # this defines a Field `hello` in our Schema with a single Argument `name`
         hello = String(name=String(default_value="stranger"))
-        graphotype = Field(lambda: adapter.adapt(Graphotype))
+        graphotype = Field(lambda: Graphotype)
 
         # our Resolver method takes the GraphQL context (root, info) as well as
         # Argument (name) for the Field and returns data for the query Response
@@ -33,8 +35,10 @@ def test_interop():
 
     schema = adapter.schema
 
-    result = schema.execute('{ graphotype { a_property }}')
+    result = graphql(schema, '{ graphotype { a_property }}')
+    assert not result.errors
     assert result.data == {'graphotype': {'a_property': 'value'}}
 
-    result = schema.execute('{ graphotype { a_property, a_subobject { goodbye } }')
-    assert result.data == {'graphotype': {'a_property': 'value', 'subobject': {'goodbye': 'See ya!'}}}
+    result = graphql(schema, '{ graphotype { a_property, a_subobject { goodbye } } }')
+    assert not result.errors
+    assert result.data == {'graphotype': {'a_property': 'value', 'a_subobject': {'goodbye': 'See ya!'}}}
