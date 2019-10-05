@@ -125,8 +125,8 @@ class SchemaCreator:
         self.mutation = mutation
 
     def build(self) -> GraphQLSchema:
-        query = self.translate_type_inner(types.AClass(None, self.query, origin=None))
-        mutation = self.translate_type_inner(types.AClass(None, self.mutation, origin=None)) if self.mutation else None
+        query = self.translate_annotation_unwrapped(types.AClass(None, self.query, origin=None))
+        mutation = self.translate_annotation_unwrapped(types.AClass(None, self.mutation, origin=None)) if self.mutation else None
         # Interface implementations may not have been explicitly referenced in
         # the schema. But their interface must have been--so we want to
         # traverse all interfaces, find their subclasses and explicitly supply
@@ -143,7 +143,7 @@ class SchemaCreator:
             if isinstance(interface, type) and issubclass(interface, Interface):
                 for impl in interface.__subclasses__():
                     ann = types.AClass(None, impl, origin=None)
-                    extra_types.append(self.translate_type_inner(ann))
+                    extra_types.append(self.translate_annotation_unwrapped(ann))
         return GraphQLSchema(
             query=query,
             mutation=mutation,
@@ -151,25 +151,22 @@ class SchemaCreator:
         )
 
 
-    def translate_type(self, ann: types.Annotation) -> GraphQLNamedType:
+    def translate_annotation(self, ann: types.Annotation) -> GraphQLNamedType:
         if ann.t in self.type_map:
             if isinstance(ann, types.AUnion):
                 self.check_union_name(ann)
             return self.type_map[ann.t]
-        gt = self._translate_type_impl(ann)
+        gt = self._translate_annotation_impl(ann)
         self.type_map[ann.t] = gt
         return gt
 
-    def translate_type_inner(self, ann: types.Annotation) -> GraphQLNamedType:
-        return self.translate_type(ann).of_type
-
-    def _translate_type_impl(self, ann: types.Annotation) -> GraphQLNamedType:
+    def _translate_annotation_impl(self, ann: types.Annotation) -> GraphQLNamedType:
         if isinstance(ann, types.AList):
             return GraphQLNonNull(GraphQLList(
-                self.translate_type(ann.of_type)
+                self.translate_annotation(ann.of_type)
             ))
         elif isinstance(ann, types.AOptional):
-            return self.translate_type_inner(ann.of_type)
+            return self.translate_annotation_unwrapped(ann.of_type)
         elif isinstance(ann, types.AUnion):
             return GraphQLNonNull(self.map_union(ann))
         elif isinstance(ann, types.ANewType):
@@ -192,6 +189,9 @@ class SchemaCreator:
 - Did you forget to inherit Object?
 - Did you forget to add its scalar mapper to the `scalars` list?""")
 
+    def translate_annotation_unwrapped(self, ann: types.Annotation) -> GraphQLNamedType:
+        return self.translate_annotation(ann).of_type
+
     def map_type(self, cls: Type) -> GraphQLObjectType:
         interfaces = [
             types.AClass(None, t, origin=None) for t in cls.__mro__
@@ -201,7 +201,7 @@ class SchemaCreator:
             name=cls.__name__,
             description=cls.__doc__,
             fields=lambda: self.map_fields(cls),
-            interfaces=lambda: [self.translate_type_inner(t) for t in interfaces],
+            interfaces=lambda: [self.translate_annotation_unwrapped(t) for t in interfaces],
             is_type_of=lambda obj, info: isinstance(obj, cls)
         )
 
@@ -260,20 +260,20 @@ class SchemaCreator:
             if field.name not in hints:
                 raise SchemaError(f"""No type hint found for {cls}.{field}.
 Suggestion: add a type hint (e.g., ': {field.type or '<type>'} = ...' to your declaration.""")
-            fields[field.name] = GraphQLInputObjectField(type=self.translate_type(hints[field.name]))
+            fields[field.name] = GraphQLInputObjectField(type=self.translate_annotation(hints[field.name]))
         return fields
 
     def property_field(self, name: str, p: property) -> GraphQLField:
         return_type = types.get_annotations(p.fget)['return']
         return GraphQLField(
-            self.translate_type(return_type),
+            self.translate_annotation(return_type),
             description=p.__doc__,
             resolver=self.property_resolver(name)
         )
 
     def attribute_field(self, name: str, t: types.Annotation) -> GraphQLField:
         return GraphQLField(
-            self.translate_type(t),
+            self.translate_annotation(t),
             resolver=self.property_resolver(name)
         )
 
@@ -286,10 +286,10 @@ Suggestion: add a type hint (e.g., ': {field.type or '<type>'} = ...' to your de
                 py_args[name] = value
             return f(self_, **py_args)
         return GraphQLField(
-            self.translate_type(return_type),
+            self.translate_annotation(return_type),
             args={
                 name:
-                GraphQLArgument(type=self.translate_type(t))
+                GraphQLArgument(type=self.translate_annotation(t))
                 for name, t in hints.items()},
             description=f.__doc__,
             resolver=resolver
@@ -309,7 +309,7 @@ Suggestion: add a type hint (e.g., ': {field.type or '<type>'} = ...' to your de
             )
         else:
             # just de-alias the newtype I guess
-            return self.translate_type_inner(t.of_type)
+            return self.translate_annotation_unwrapped(t.of_type)
 
     def map_custom_scalar(self, name: str, supertype: GraphQLScalarType
     ) -> GraphQLScalarType:
@@ -340,9 +340,9 @@ forward-referenced, e.g.:
         self.check_union_name(ann)
         return GraphQLUnionType(
             name=ann.name,
-            # translate_type returns a NonNull, but we need the underlying for
+            # translate_annotation returns a NonNull, but we need the underlying for
             # our union
-            types=[self.translate_type_inner(ann) for ann in ann.of_types],
+            types=[self.translate_annotation_unwrapped(ann) for ann in ann.of_types],
         )
 
     def property_resolver(self, name: str) -> Callable:
