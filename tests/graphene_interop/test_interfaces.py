@@ -3,7 +3,7 @@ import graphene as gn
 import graphotype as gt
 from graphql import graphql
 
-from graphotype.graphene import InteropSchemaCreator, InteropInterface
+from graphotype.graphene import InteropSchemaCreator
 
 class Query(gt.Object):
 

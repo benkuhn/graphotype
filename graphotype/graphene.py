@@ -115,9 +115,3 @@ class InteropSchemaCreator(SchemaCreator):
     @property
     def schema(self):
         return self.build()
-
-
-class InteropInterface(Interface, graphene.Interface):
-
-    def __init__(self) -> None:
-        pass
