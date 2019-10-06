@@ -4,6 +4,8 @@ import graphotype as gt
 from graphql import graphql
 
 from graphotype.graphene import InteropSchemaCreator
+from tests.helpers import execute
+
 
 def test_basic_interop():
     class Query(gn.ObjectType):
@@ -29,11 +31,9 @@ def test_basic_interop():
 
     schema = InteropSchemaCreator(Query).build()
 
-    result = graphql(schema, '{ graphotype { a_property }}')
-    assert not result.errors
-    assert result.data == {'graphotype': {'a_property': 'value'}}
+    result = execute(schema, '{ graphotype { a_property }}')
+    assert result == {'graphotype': {'a_property': 'value'}}
 
-    result = graphql(schema, '{ graphotype { a_property, a_subobject { goodbye } } }')
-    assert not result.errors
-    assert result.data == {'graphotype': {'a_property': 'value', 'a_subobject': {'goodbye': 'See ya!'}}}
+    result = execute(schema, '{ graphotype { a_property, a_subobject { goodbye } } }')
+    assert result == {'graphotype': {'a_property': 'value', 'a_subobject': {'goodbye': 'See ya!'}}}
 

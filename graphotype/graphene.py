@@ -75,6 +75,12 @@ class InteropTypeMap(graphene.types.typemap.TypeMap):
             return map
         return super().reducer(map, type)
 
+    def construct_objecttype(self, map, type):
+        result = super().construct_objecttype(map, type)
+        if result.is_type_of is None:
+            result.is_type_of = lambda obj, info: isinstance(obj, type)
+        return result
+
     def get_field_type(self, map, type):
         assert map is self.sc.name_map
         if issubclass(type, Object):
@@ -86,9 +92,6 @@ class InteropSchemaCreator(SchemaCreator):
     def __init__(self, query):
         super().__init__(query, None, [])
         self.name_map = {}
-
-    def adapt(self, t):
-        return self.translate_type(t).of_type
 
     def translate_type(self, t):
         if graphene.types.typemap.is_graphene_type(t):
